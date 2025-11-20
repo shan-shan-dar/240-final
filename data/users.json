@@ -1,0 +1,45 @@
+[
+  {
+    "uid": "USR286872",
+    "username": "David",
+    "password": "1234",
+    "calorieGoal": 2300,
+    "proteinRatio": 0.40,
+    "carbsRatio": 0.40,
+    "fatsRatio": 0.20,
+    "loggedMeals": {
+      "2025-11-19": {
+        "breakfast": {
+          "Bacon": 0.50,
+          "Fried Eggs": 3.00,
+          "Honey": 2.00,
+          "Steel Cut Oats": 3.00
+        }
+      },
+      "2025-11-20": {
+        "breakfast": {
+          "Steel Cut Oats": 23.00
+        },
+        "lunch": {
+          "Apple": 30.00
+        }
+      }
+    }
+  },
+  {
+    "uid": "USR291921",
+    "username": "Jon",
+    "password": "pork",
+    "calorieGoal": 3500,
+    "proteinRatio": 0.80,
+    "carbsRatio": 0.10,
+    "fatsRatio": 0.10,
+    "loggedMeals": {
+      "2025-11-20": {
+        "breakfast": {
+          "Walnuts": 100.00
+        }
+      }
+    }
+  }
+]

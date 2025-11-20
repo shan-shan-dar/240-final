@@ -1,0 +1,410 @@
+#include "MenuManager.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <ctime>
+
+using namespace std;
+
+// Helper function to trim whitespace from string
+static string trim(const string& str) {
+    size_t first = str.find_first_not_of(" \t\n\r");
+    if (first == string::npos) return "";
+    size_t last = str.find_last_not_of(" \t\n\r");
+    return str.substr(first, last - first + 1);
+}
+
+// Constructor - load menu from file
+MenuManager::MenuManager(const string& filepath) : menuFilePath(filepath) {
+    loadMenu();
+}
+
+// Load menu items from file or use defaults
+void MenuManager::loadMenu() {
+    ifstream file(menuFilePath);
+    if (!file.is_open()) {
+        // Create sample menu data with station field and serving sizes
+        currentMenu = {
+            {"Grilled Chicken Breast", "Main", 165, 31.0, 0.0, 3.6, "4", "oz"},
+            {"Brown Rice (1 cup)", "Main", 216, 5.0, 45.0, 1.8, "1", "cup"},
+            {"Steamed Broccoli", "Sides", 55, 3.7, 11.2, 0.6, "1", "cup"},
+            {"Caesar Salad", "Salads", 184, 3.0, 7.0, 15.0, "1", "serving"},
+            {"Spaghetti with Marinara", "Main", 350, 12.0, 65.0, 5.0, "1", "serving"},
+            {"Greek Yogurt (1 cup)", "Breakfast", 130, 11.0, 17.0, 0.4, "1", "cup"},
+            {"Turkey Sandwich", "Main", 320, 25.0, 38.0, 8.0, "1", "sandwich"},
+            {"Vegetable Stir Fry", "Main", 180, 6.0, 28.0, 6.0, "1", "cup"},
+            {"Baked Salmon", "Main", 206, 22.0, 0.0, 12.0, "4", "oz"},
+            {"Quinoa Bowl", "Main", 222, 8.0, 39.0, 3.6, "1", "bowl"},
+            {"Mixed Green Salad", "Salads", 85, 2.0, 8.0, 5.0, "1", "serving"},
+            {"Chocolate Chip Cookie", "Dessert", 150, 2.0, 20.0, 7.0, "1", "cookie"},
+            {"Apple", "Fruit", 95, 0.5, 25.0, 0.3, "1", "medium"},
+            {"Banana", "Fruit", 105, 1.3, 27.0, 0.4, "1", "medium"},
+            {"Oatmeal with Berries", "Breakfast", 280, 10.0, 50.0, 5.0, "1", "serving"}
+        };
+        return;
+    }
+    
+    currentMenu.clear();
+    string line;
+    
+    // Skip opening bracket
+    getline(file, line);
+    
+    while (getline(file, line)) {
+        if (line.find("\"name\"") != string::npos) {
+            FoodItem item;
+            
+            // Parse name
+            size_t start = line.find(":") + 1;
+            size_t end = line.find_last_of("\"");
+            start = line.find("\"", start) + 1;
+            item.name = line.substr(start, end - start);
+            
+            // Parse calories
+            getline(file, line);
+            start = line.find(":") + 1;
+            item.calories = stoi(line.substr(start));
+            
+            // Parse protein
+            getline(file, line);
+            start = line.find(":") + 1;
+            item.protein = stod(line.substr(start));
+            
+            // Parse carbs
+            getline(file, line);
+            start = line.find(":") + 1;
+            item.carbs = stod(line.substr(start));
+            
+            // Parse fats
+            getline(file, line);
+            start = line.find(":") + 1;
+            item.fats = stod(line.substr(start));
+            
+            currentMenu.push_back(item);
+        }
+    }
+    
+    file.close();
+}
+
+// Load menu from specific file path (for date-specific menus)
+vector<FoodItem> MenuManager::loadMenuFromFile(const string& filename) {
+    vector<FoodItem> menu;
+    ifstream file(filename);
+    
+    if (!file.is_open()) {
+        return menu;  // Return empty menu if file doesn't exist
+    }
+    
+    string line;
+    string currentStation = "";
+    
+    // Skip opening brace
+    getline(file, line);
+    
+    while (getline(file, line)) {
+        // Check for station name (e.g., "Provisions 804": [)
+        // But exclude "icons": [ which is not a station
+        if (line.find("\":") != string::npos && line.find("[") != string::npos) {
+            size_t start = line.find("\"") + 1;
+            size_t end = line.find("\"", start);
+            string possibleStation = line.substr(start, end - start);
+            
+            // Only update station if it's not "icons", "serving_size", etc.
+            if (possibleStation != "icons" && possibleStation != "serving_size") {
+                currentStation = possibleStation;
+            }
+            continue;
+        }
+        
+        // Look for "name" field to identify a food item
+        if (line.find("\"name\"") != string::npos) {
+            FoodItem item;
+            item.station = currentStation;
+            
+            try {
+                // Parse name
+                size_t start = line.find(":") + 1;
+                size_t end = line.find_last_of("\"");
+                start = line.find("\"", start) + 1;
+                item.name = line.substr(start, end - start);
+                
+                // Skip ingredients line
+                getline(file, line);
+                
+                // Skip "nutrition": { line
+                getline(file, line);
+                
+                // Parse calories
+                getline(file, line);
+                start = line.find(":") + 1;
+                string calStr = line.substr(start);
+                size_t commaPos = calStr.find(",");
+                if (commaPos != string::npos) {
+                    calStr = calStr.substr(0, commaPos);
+                }
+                calStr = trim(calStr);
+                item.calories = static_cast<int>(stod(calStr));
+                
+                // Parse g_fat
+                getline(file, line);
+                start = line.find(":") + 1;
+                string fatStr = line.substr(start);
+                commaPos = fatStr.find(",");
+                if (commaPos != string::npos) {
+                    fatStr = fatStr.substr(0, commaPos);
+                }
+                fatStr = trim(fatStr);
+                item.fats = stod(fatStr);
+                
+                // Parse g_carbs
+                getline(file, line);
+                start = line.find(":") + 1;
+                string carbStr = line.substr(start);
+                commaPos = carbStr.find(",");
+                if (commaPos != string::npos) {
+                    carbStr = carbStr.substr(0, commaPos);
+                }
+                carbStr = trim(carbStr);
+                item.carbs = stod(carbStr);
+                
+                // Parse g_protein
+                getline(file, line);
+                start = line.find(":") + 1;
+                string proteinStr = line.substr(start);
+                commaPos = proteinStr.find(",");
+                if (commaPos != string::npos) {
+                    proteinStr = proteinStr.substr(0, commaPos);
+                }
+                proteinStr = trim(proteinStr);
+                item.protein = stod(proteinStr);
+                
+                // Skip closing brace of nutrition
+                getline(file, line);
+                
+                // Parse serving_size
+                getline(file, line);
+                if (line.find("serving_size") != string::npos) {
+                    // The opening brace { is on the same line as "serving_size": {
+                    // So we can directly read the serving_size_amount next
+                    
+                    // Parse serving_size_amount
+                    getline(file, line);
+                    start = line.find(":") + 1;
+                    string amountStr = line.substr(start);
+                    commaPos = amountStr.find(",");
+                    if (commaPos != string::npos) {
+                        amountStr = amountStr.substr(0, commaPos);
+                    }
+                    amountStr = trim(amountStr);
+                    // Remove quotes
+                    if (!amountStr.empty() && amountStr.front() == '"') amountStr = amountStr.substr(1);
+                    if (!amountStr.empty() && amountStr.back() == '"') amountStr.pop_back();
+                    item.servingAmount = amountStr;
+                    
+                    // Parse serving_size_unit
+                    getline(file, line);
+                    start = line.find(":") + 1;
+                    string unitStr = line.substr(start);
+                    commaPos = unitStr.find(",");
+                    if (commaPos != string::npos) {
+                        unitStr = unitStr.substr(0, commaPos);
+                    }
+                    unitStr = trim(unitStr);
+                    // Remove quotes and any trailing characters
+                    if (!unitStr.empty() && unitStr.front() == '\"') unitStr = unitStr.substr(1);
+                    if (!unitStr.empty() && unitStr.back() == '\"') unitStr.pop_back();
+                    // Remove any remaining special characters
+                    size_t bracePos = unitStr.find('}');
+                    if (bracePos != string::npos) {
+                        unitStr = unitStr.substr(0, bracePos);
+                    }
+                    unitStr = trim(unitStr);
+                    item.servingUnit = unitStr;
+                    
+                    // Convert nutrition to per-serving values
+                    try {
+                        double servingCount = stod(item.servingAmount);
+                        if (servingCount > 0) {
+                            item.calories = static_cast<int>(item.calories / servingCount);
+                            item.protein = item.protein / servingCount;
+                            item.carbs = item.carbs / servingCount;
+                            item.fats = item.fats / servingCount;
+                        }
+                    } catch (...) {
+                        // If parsing fails, keep original values
+                    }
+                } else {
+                    item.servingAmount = "1";
+                    item.servingUnit = "serving";
+                }
+                
+                menu.push_back(item);
+            } catch (const exception& e) {
+                #ifdef DEBUG
+                cerr << "Error parsing item '" << item.name << "': " << e.what() << endl;
+                #endif
+                continue;
+            }
+        }
+    }
+    
+    file.close();
+    
+    // Sort items by station, then alphabetically by name within each station
+    sort(menu.begin(), menu.end(), [](const FoodItem& a, const FoodItem& b) {
+        if (a.station != b.station) {
+            return a.station < b.station;
+        }
+        return a.name < b.name;
+    });
+    
+    return menu;
+}
+
+// Get the menu for a specific meal and date
+vector<FoodItem> MenuManager::getDailyMenu(const string& mealType, const string& date) {
+    // Try to load from data/menus/{mealType}-{date}.json
+    string filepath = "../data/menus/" + mealType + "-" + date + ".json";
+    vector<FoodItem> menu = loadMenuFromFile(filepath);
+    
+    // If no file found, return the default current menu
+    if (menu.empty()) {
+        return currentMenu;
+    }
+    
+    return menu;
+}
+
+// Display menu as a simple numbered list
+void MenuManager::displayMenu(const vector<FoodItem>& menu) {
+    cout << "\n";
+    for (size_t i = 0; i < menu.size(); i++) {
+        cout << "  " << (i + 1) << ". " << menu[i].name << "\n";
+    }
+}
+
+// Display menu as a formatted table with nutrition info
+void MenuManager::displayMenuTable(const vector<FoodItem>& menu) {
+    // ANSI color codes
+    const string CYAN = "\033[36m";
+    const string YELLOW = "\033[33m";
+    const string GREEN = "\033[32m";
+    const string RESET = "\033[0m";
+    const string BOLD = "\033[1m";
+    
+    // Group items by station
+    string currentStation = "";
+    int itemNum = 1;
+    
+    for (const auto& item : menu) {
+        // Print station header when it changes
+        if (item.station != currentStation) {
+            if (!currentStation.empty()) {
+                cout << "\n";  // Space between stations
+            }
+            currentStation = item.station;
+            cout << "  " << CYAN << BOLD << currentStation << RESET << "\n";
+            cout << "  " << string(95, '-') << "\n";
+            // Print table header
+            cout << "  " << setw(5) << left << "#" 
+                 << "| " << setw(22) << "Name"
+                 << "| " << setw(12) << "Cals/Serving"
+                 << "| " << setw(12) << "Protein(g)"
+                 << "| " << setw(11) << "Carbs(g)"
+                 << "| " << setw(10) << "Fats(g)" << "\n";
+            cout << "  " << string(95, '-') << "\n";
+        }
+        
+        // Format calories with serving unit
+        string calDisplay = to_string(item.calories) + "/" + item.servingUnit;
+        
+        // Format macros without units (just numbers with 'g')
+        stringstream proteinDisplay, carbsDisplay, fatsDisplay;
+        proteinDisplay << fixed << setprecision(1) << item.protein << "";
+        carbsDisplay << fixed << setprecision(1) << item.carbs << "";
+        fatsDisplay << fixed << setprecision(1) << item.fats << "";
+        
+        // Print item in table format
+        cout << "  " << YELLOW << "[" << setw(3) << itemNum << "]" << RESET
+             << "| " << setw(22) << left << item.name.substr(0, 21)
+             << "| " << GREEN << setw(12) << calDisplay.substr(0, 11) << RESET
+             << "| " << setw(12) << proteinDisplay.str()
+             << "| " << setw(11) << carbsDisplay.str()
+             << "| " << setw(10) << fatsDisplay.str() << "\n";
+        
+        itemNum++;
+    }
+}
+
+// Generate a meal plan optimized for user's goals
+// TODO: Implement meal plan generation algorithm
+vector<FoodItem> MenuManager::generateMealPlan(const User& user) {
+    (void)user; // Suppress unused parameter warning for future implementation
+    vector<FoodItem> mealPlan;
+    
+    // This feature is currently under development
+    // Future developer: Implement greedy or optimization algorithm here
+    // to select menu items that match user's calorie and macro targets
+    
+    return mealPlan;
+}
+
+// Log a meal item for a user
+bool MenuManager::logMeal(User& user, const string& mealType, const string& date, 
+                          int menuNumber, double servings) {
+    // Get the menu for the specified meal and date
+    vector<FoodItem> menu = getDailyMenu(mealType, date);
+    
+    // Check if menu number is valid
+    if (menuNumber < 1 || menuNumber > static_cast<int>(menu.size())) {
+        return false;
+    }
+    
+    // Get the food item
+    FoodItem item = menu[menuNumber - 1];
+    
+    // Add or update the logged meal using new structure: date -> mealType -> food
+    user.loggedMeals[date][mealType][item.name] = servings;
+    
+    return true;
+}
+
+// Calculate total nutrition for a specific date
+MenuManager::DailyTotals MenuManager::calculateDailyTotals(const User& user, const string& date) {
+    DailyTotals totals = {0, 0.0, 0.0, 0.0};
+    
+    // Check if this date exists in logged meals
+    auto dateIt = user.loggedMeals.find(date);
+    if (dateIt == user.loggedMeals.end()) {
+        return totals;
+    }
+    
+    // Iterate through all meals for this date (breakfast, lunch, dinner)
+    for (const auto& mealEntry : dateIt->second) {
+        string mealType = mealEntry.first;
+        
+        // Load the menu for this meal type to get nutrition info
+        vector<FoodItem> menu = getDailyMenu(mealType, date);
+        
+        // Iterate through all logged food items
+        for (const auto& foodEntry : mealEntry.second) {
+            string foodName = foodEntry.first;
+            double servings = foodEntry.second;
+            
+            // Find this food item in the menu
+            for (const auto& item : menu) {
+                if (item.name == foodName) {
+                    totals.calories += static_cast<int>(item.calories * servings);
+                    totals.protein += item.protein * servings;
+                    totals.carbs += item.carbs * servings;
+                    totals.fats += item.fats * servings;
+                    break;
+                }
+            }
+        }
+    }
+    
+    return totals;
+}
