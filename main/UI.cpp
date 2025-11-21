@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <limits>
 #include <ctime>
+#include <algorithm>
+#include <vector>
 
 using namespace std;
 
@@ -573,31 +575,155 @@ void UI::showDailyMenu() {
     waitForEnter();
 }
 
+// Helper struct to hold meal-specific nutritional targets
+struct MealTargets {
+    double calories;
+    double protein;
+    double carbs;
+    double fats;
+};
 
-// Show the meal plan generator
 void UI::showMealGenerator() {
-    const string YELLOW = "\033[33m";
     const string CYAN = "\033[36m";
+    const string YELLOW = "\033[33m";
+    const string GREEN = "\033[32m";
     const string BOLD = "\033[1m";
     const string RESET = "\033[0m";
-    
+
     clearScreen();
     printHeader("PERSONALIZED MEAL PLAN GENERATOR");
-    
+
+    // 1. Calculate Overall Daily Goals in Grams
+    double proteinGoal = (currentUser.calorieGoal * currentUser.macroRatio.protein) / 4.0;
+    double carbsGoal = (currentUser.calorieGoal * currentUser.macroRatio.carbs) / 4.0;
+    double fatsGoal = (currentUser.calorieGoal * currentUser.macroRatio.fats) / 9.0;
+
     cout << "\n";
-    cout << "     " << YELLOW << BOLD << "This feature is currently under development." << RESET << "\n";
-    cout << "\n";
+    cout << "  " << BOLD << "Your Daily Goals:" << RESET << "\n";
+    cout << "  - Calories: " << GREEN << currentUser.calorieGoal << RESET << "\n";
+    cout << "  - Protein:  " << YELLOW << static_cast<int>(proteinGoal) << "g" << RESET << "\n";
+    cout << "  - Carbs:    " << GREEN << static_cast<int>(carbsGoal) << "g" << RESET << "\n";
+    cout << "  - Fats:     " << CYAN << static_cast<int>(fatsGoal) << "g" << RESET << "\n";
     printSeparator();
-    cout << "\n";
-    cout << "     " << CYAN << "Coming soon:" << RESET << "\n";
-    cout << "       - AI-powered meal recommendations\n";
-    cout << "       - Optimized macro targeting\n";
-    cout << "       - Personalized nutrition plans\n";
-    cout << "\n";
-    printSeparator();
     
+    // 2. Define Meal Budgets (e.g., 30% Breakfast, 40% Lunch, 30% Dinner)
+    map<string, MealTargets> mealBudgets;
+    mealBudgets["breakfast"] = {currentUser.calorieGoal * 0.30, proteinGoal * 0.30, carbsGoal * 0.30, fatsGoal * 0.30};
+    mealBudgets["lunch"] = {currentUser.calorieGoal * 0.40, proteinGoal * 0.40, carbsGoal * 0.40, fatsGoal * 0.40};
+    mealBudgets["dinner"] = {currentUser.calorieGoal * 0.30, proteinGoal * 0.30, carbsGoal * 0.30, fatsGoal * 0.30};
+
+    // 3. Fetch All Available Menus for Today
+    time_t now = time(0);
+    tm* ltm = localtime(&now);
+    char dateStr[11];
+    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", ltm);
+
+    fetchMenuFor(dateStr, "breakfast");
+    fetchMenuFor(dateStr, "lunch");
+    fetchMenuFor(dateStr, "dinner");
+
+    map<string, vector<FoodItem>> allMenus;
+    allMenus["breakfast"] = menuManager.getDailyMenu("breakfast", dateStr);
+    allMenus["lunch"] = menuManager.getDailyMenu("lunch", dateStr);
+    allMenus["dinner"] = menuManager.getDailyMenu("dinner", dateStr);
+
+    if (allMenus["breakfast"].empty() && allMenus["lunch"].empty() && allMenus["dinner"].empty()) {
+        cout << "\n  " << YELLOW << "No menus available for today to generate a meal plan." << RESET << "\n";
+        waitForEnter();
+        return;
+    }
+
+    // 4. Algorithm: Find the Best Item for Each Meal's Budget
+    map<string, FoodItem> selectedMeals;
+    
+    for (const auto& budgetPair : mealBudgets) {
+        const string& mealType = budgetPair.first;
+        const MealTargets& targets = budgetPair.second;
+        const vector<FoodItem>& currentMenu = allMenus[mealType];
+
+        if (currentMenu.empty()) continue;
+
+        FoodItem bestItemForMeal;
+        double bestScore = -1.0;
+
+        for (const auto& item : currentMenu) {
+            // Score based on how well the item fits the *meal's* budget.
+            // A score of 1.0 is a perfect match, 0.0 is a terrible match.
+            double calorieScore = 1.0 - (abs(item.calories - targets.calories) / max(targets.calories, 1.0));
+            double proteinScore = 1.0 - (abs(item.protein - targets.protein) / max(targets.protein, 1.0));
+            double carbsScore = 1.0 - (abs(item.carbs - targets.carbs) / max(targets.carbs, 1.0));
+            double fatsScore = 1.0 - (abs(item.fats - targets.fats) / max(targets.fats, 1.0));
+
+            // Weighted average of scores. Calories are most important.
+            double finalScore = (0.5 * calorieScore) + (0.2 * proteinScore) + (0.15 * carbsScore) + (0.15 * fatsScore);
+            
+            if (finalScore > bestScore) {
+                bestScore = finalScore;
+                bestItemForMeal = item;
+            }
+        }
+        selectedMeals[mealType] = bestItemForMeal;
+    }
+    
+    // --- 5. Display the Generated Plan ---
+    cout << "\n  " << BOLD << "Generated Meal Plan for Today:" << RESET << "\n\n";
+    double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFats = 0;
+
+    vector<string> mealOrder = {"breakfast", "lunch", "dinner"};
+    for (const string& mealType : mealOrder) {
+        if (selectedMeals.count(mealType)) {
+            const auto& item = selectedMeals[mealType];
+            string mealName = mealType;
+            mealName[0] = toupper(mealName[0]); // Capitalize
+            
+            cout << "  " << YELLOW << "⦿ " << mealName << ": " << RESET << BOLD << item.name << RESET << "\n";
+            cout << "    "
+                 << GREEN << item.calories << " cal" << RESET << " | "
+                 << YELLOW << "P:" << static_cast<int>(item.protein) << "g" << RESET << " "
+                 << GREEN << "C:" << static_cast<int>(item.carbs) << "g" << RESET << " "
+                 << CYAN << "F:" << static_cast<int>(item.fats) << "g" << RESET << "\n\n";
+
+            totalCalories += item.calories;
+            totalProtein += item.protein;
+            totalCarbs += item.carbs;
+            totalFats += item.fats;
+        }
+    }
+
+    printSeparator();
+    cout << "\n  " << BOLD << "Plan Summary:" << RESET << "\n";
+    cout << "  - Total Calories: " << GREEN << static_cast<int>(totalCalories) << " / " << currentUser.calorieGoal << RESET << "\n";
+    cout << "  - Total Protein:  " << YELLOW << static_cast<int>(totalProtein) << "g / " << static_cast<int>(proteinGoal) << "g" << RESET << "\n";
+    cout << "  - Total Carbs:    " << GREEN << static_cast<int>(totalCarbs) << "g / " << static_cast<int>(carbsGoal) << "g" << RESET << "\n";
+    cout << "  - Total Fats:     " << CYAN << static_cast<int>(totalFats) << "g / " << static_cast<int>(fatsGoal) << "g" << RESET << "\n\n";
+
     waitForEnter();
 }
+
+// // Show the meal plan generator
+// void UI::showMealGenerator() {
+//     const string YELLOW = "\033[33m";
+//     const string CYAN = "\033[36m";
+//     const string BOLD = "\033[1m";
+//     const string RESET = "\033[0m";
+    
+//     clearScreen();
+//     printHeader("PERSONALIZED MEAL PLAN GENERATOR");
+    
+//     cout << "\n";
+//     cout << "     " << YELLOW << BOLD << "This feature is currently under development." << RESET << "\n";
+//     cout << "\n";
+//     printSeparator();
+//     cout << "\n";
+//     cout << "     " << CYAN << "Coming soon:" << RESET << "\n";
+//     cout << "       - AI-powered meal recommendations\n";
+//     cout << "       - Optimized macro targeting\n";
+//     cout << "       - Personalized nutrition plans\n";
+//     cout << "\n";
+//     printSeparator();
+    
+//     waitForEnter();
+// }
 
 // Show food logger screen
 void UI::showFoodLogger() {
