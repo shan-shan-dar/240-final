@@ -302,7 +302,7 @@ void UI::showMainMenu() {
         
         // Overall status
         cout << "\n";
-        int avgPercent = (calPercent + proteinPercent + carbsPercent + fatsPercent) / 4;
+        int avgPercent = calPercent;//(calPercent + proteinPercent + carbsPercent + fatsPercent) / 4;
         if (avgPercent == 0) {
             cout << "  " << YELLOW << "💡 Tip:" << RESET << " Start logging meals to track your progress!\n";
         } else if (avgPercent < 50) {
@@ -457,11 +457,36 @@ void UI::showDailyMenu() {
     clearScreen();
     printHeader("VIEW DINING HALL MENUS");
 
-    // Ask user for date
+    // Ask user: today's date or custom date
     cout << "\n";
-    cout << "  Enter date (YYYY-MM-DD): ";
+    cout << "     " << YELLOW << "[1]" << RESET << " View today's menu\n";
+    cout << "     " << YELLOW << "[2]" << RESET << " View menu for a specific date\n";
+    cout << "\n";
+    cout << "  >> Choice: ";
+    int dateChoice;
+    cin >> dateChoice;
+
     string dateStr;
-    cin >> dateStr;
+    if (dateChoice == 1) {
+        // Use today's date
+        time_t now = time(0);
+        tm* ltm = localtime(&now);
+        char dateBuffer[11];
+        strftime(dateBuffer, sizeof(dateBuffer), "%Y-%m-%d", ltm);
+        dateStr = dateBuffer;
+    } else if (dateChoice == 2) {
+        // Ask user for custom date
+        cout << "\n";
+        cout << "  Enter date (YYYY-MM-DD): ";
+        cin >> dateStr;
+    } else {
+        cout << "\n";
+        printSeparator();
+        cout << "\n  " << RED << "Invalid choice. Returning to main menu." << RESET << "\n";
+        printSeparator();
+        waitForEnter();
+        return;
+    }
 
     // Ask user for meal
     cout << "\n";

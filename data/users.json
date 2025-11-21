@@ -8,20 +8,12 @@
     "carbsRatio": 0.40,
     "fatsRatio": 0.20,
     "loggedMeals": {
-      "2025-11-19": {
-        "breakfast": {
-          "Bacon": 0.50,
-          "Fried Eggs": 3.00,
-          "Honey": 2.00,
-          "Steel Cut Oats": 3.00
-        }
-      },
       "2025-11-20": {
         "breakfast": {
-          "Steel Cut Oats": 23.00
-        },
-        "lunch": {
-          "Apple": 30.00
+          "Bacon": 0.90,
+          "Cinnamon Rolls": 1.00,
+          "Fried Eggs": 3.00,
+          "Pork Bao Bun": 1.00
         }
       }
     }
