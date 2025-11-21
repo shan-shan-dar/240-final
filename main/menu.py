@@ -11,8 +11,7 @@ DINING_HALL = "heilman-dining-hall"
 DISTRICT = "richmond"
 MEAL_TYPES = {"breakfast", "lunch", "dinner"}
 
-DESTINATION_FOLDER = 'menus'
-
+DESTINATION_FOLDER = '../data/menus'
 
 def fetch_menu(dining_hall: str, meal_type: str, date: datetime):
     """

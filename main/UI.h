@@ -17,6 +17,9 @@ private:
     void printHeader(const std::string& title);
     void printSeparator();
     void waitForEnter();
+
+    // NEW: run menu.py for a given date + meal
+    bool fetchMenuFor(const std::string& date, const std::string& mealType);
     
     void showWelcomeScreen();
     void showLoginScreen();

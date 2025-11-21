@@ -41,5 +41,21 @@
         }
       }
     }
+  },
+  {
+    "uid": "USR559317",
+    "username": "Darshan",
+    "password": "4321",
+    "calorieGoal": 2400,
+    "proteinRatio": 0.40,
+    "carbsRatio": 0.40,
+    "fatsRatio": 0.20,
+    "loggedMeals": {
+      "2025-11-20": {
+        "breakfast": {
+          "Belgian Waffle": 2.00
+        }
+      }
+    }
   }
 ]

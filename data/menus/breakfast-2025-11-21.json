@@ -80,34 +80,31 @@
       "id": 3
     },
     {
-      "name": "Pork Bao Bun",
-      "ingredients": "pork bao bun water sugar shortening baking powder yeast filling pork water sugar soy sauce wheat starch wheat flour oyster flavored sauce modified corn starch caramel color hoisin sauce black pepper caramel color food color yellow food color red",
+      "name": "Sausage Patty",
+      "ingredients": "sausage patty",
       "nutrition": {
-        "calories": 130.0,
-        "g_fat": 4.0,
-        "g_carbs": 23.0,
-        "g_protein": 6.0
+        "calories": 137.0,
+        "g_fat": 11.0,
+        "g_carbs": 2.0,
+        "g_protein": 8.0
       },
       "serving_size": {
-        "serving_size_amount": "1",
-        "serving_size_unit": "each"
+        "serving_size_amount": "2",
+        "serving_size_unit": "oz"
       },
       "icons": [
-        "Sesame",
-        "Soy",
-        "Shellfish",
-        "Wheat"
+        "GFI"
       ],
       "id": 4
     },
     {
-      "name": "White Rice",
-      "ingredients": "long grain rice water salt dextrose potassium iodide",
+      "name": "Homefried Potatoes",
+      "ingredients": "potatoes yellow onions red peppers green peppers olive oil kosher salt ground black pepper paprika",
       "nutrition": {
-        "calories": 170.0,
-        "g_fat": 0.5,
-        "g_carbs": 37.0,
-        "g_protein": 3.0
+        "calories": 94.0,
+        "g_fat": 1.7,
+        "g_carbs": 18.0,
+        "g_protein": 2.0
       },
       "serving_size": {
         "serving_size_amount": "4",
@@ -120,21 +117,24 @@
       "id": 5
     },
     {
-      "name": "Shishito Peppers",
-      "ingredients": "shishito peppers olive oil smoked paprika kosher salt ground black pepper lemon rappe",
+      "name": "Honey Custard French Toast",
+      "ingredients": "challah bread filtered water liquid whole eggs extra fine granulated sugar soybean oil salt yeast dough improver liquid eggs milk half half honey confectioners sugar olive oil mist cinnamon kosher salt",
       "nutrition": {
-        "calories": 42.0,
-        "g_fat": 3.1,
-        "g_carbs": 3.0,
-        "g_protein": 1.0
+        "calories": 387.0,
+        "g_fat": 13.0,
+        "g_carbs": 55.0,
+        "g_protein": 14.0
       },
       "serving_size": {
-        "serving_size_amount": "2",
-        "serving_size_unit": "oz"
+        "serving_size_amount": "1",
+        "serving_size_unit": "each"
       },
       "icons": [
-        "GFI",
-        "VG"
+        "Milk",
+        "Soy",
+        "Wheat",
+        "Egg",
+        "Vegetarian"
       ],
       "id": 6
     }
@@ -581,26 +581,6 @@
       "id": 29
     },
     {
-      "name": "Low Fat Cottage Cheese",
-      "ingredients": "cottage cheese carbon dioxide diglycerides locust bean gum natural flavor vitamin a palmitate potassoim sorbate carbon dioxide enzyme",
-      "nutrition": {
-        "calories": 56.0,
-        "g_fat": 2.4,
-        "g_carbs": 2.0,
-        "g_protein": 6.0
-      },
-      "serving_size": {
-        "serving_size_amount": "2",
-        "serving_size_unit": "oz"
-      },
-      "icons": [
-        "Milk",
-        "GFI",
-        "Vegetarian"
-      ],
-      "id": 30
-    },
-    {
       "name": "Greek Yogurt",
       "ingredients": "greek yogurt",
       "nutrition": {
@@ -611,6 +591,26 @@
       },
       "serving_size": {
         "serving_size_amount": "4",
+        "serving_size_unit": "oz"
+      },
+      "icons": [
+        "Milk",
+        "GFI",
+        "Vegetarian"
+      ],
+      "id": 30
+    },
+    {
+      "name": "Low Fat Cottage Cheese",
+      "ingredients": "cottage cheese carbon dioxide diglycerides locust bean gum natural flavor vitamin a palmitate potassoim sorbate carbon dioxide enzyme",
+      "nutrition": {
+        "calories": 56.0,
+        "g_fat": 2.4,
+        "g_carbs": 2.0,
+        "g_protein": 6.0
+      },
+      "serving_size": {
+        "serving_size_amount": "2",
         "serving_size_unit": "oz"
       },
       "icons": [
@@ -1487,13 +1487,13 @@
   ],
   "Crumbs & Cream": [
     {
-      "name": "Low Fat Banana Muffin",
-      "ingredients": "low fat muffin mix modified corn starch dextrose contains less than 2 of the following egg white leavening soybean oil salt whey protein concentrate distilled monoglycerides sodium stearoyl lactylate datem ethoxylated mono and diglycerides xanthan gum artificial flavor yellows 5 6 bht soy flour banana light brown sugar sugar pure vanilla extract cinnamon",
+      "name": "Cherry Chocolate Chip Muffin",
+      "ingredients": "low fat muffin mix modified corn starch dextrose contains less than 2 of the following egg white leavening soybean oil salt whey protein concentrate distilled monoglycerides sodium stearoyl lactylate datem ethoxylated mono and diglycerides xanthan gum artificial flavor yellows 5 6 bht soy flour maraschino cherries sodium benzoate citric acid artificial flavor fd c red 40 sulfur dioxide mini semi sweet chocolate chips natural flavor milk",
       "nutrition": {
-        "calories": 205.0,
-        "g_fat": 2.3,
-        "g_carbs": 44.0,
-        "g_protein": 3.0
+        "calories": 291.0,
+        "g_fat": 6.0,
+        "g_carbs": 56.0,
+        "g_protein": 4.0
       },
       "serving_size": {
         "serving_size_amount": "1",
@@ -1509,13 +1509,13 @@
       "id": 76
     },
     {
-      "name": "Devil Food Donut",
-      "ingredients": "chocolate cake donut palm and or cottonseed and or canola oil water sugar soybean oil cocoa processed with alkali contains 2 or less of caramel color defatted soy flour egg yolks enzymes guar gum leavening mono and diglycerides natural and artificial flavor nonfat milk preservative propylene glycol mono and diesters of fatty acids salt semisweet chocolate sodium stearoyl lactylate soy lecithin sulfites",
+      "name": "Bavarian Cream Donut",
+      "ingredients": "bavarian creme filled donut water palm and or cottonseed and or canola oil sugar soybean oil leavening dextrose contains 2 or less of agar agar beta carotene caramel color defatted soy flour dough conditioner eggs food starch modified mono and diglycerides natural and artificial flavor phosphoric acid preservatives salt sodium stearoyl lactylate titanium dioxide whey xanthan gum yellow 5 yellow 6",
       "nutrition": {
-        "calories": 240.0,
+        "calories": 292.0,
         "g_fat": 16.0,
-        "g_carbs": 24.0,
-        "g_protein": 3.0
+        "g_carbs": 33.0,
+        "g_protein": 4.0
       },
       "serving_size": {
         "serving_size_amount": "1",
@@ -1531,38 +1531,38 @@
       "id": 77
     },
     {
-      "name": "Cinnamon Rolls",
-      "ingredients": "sweet cinnamon roll dough water high fructose corn syrup yeast sugar soybean oil contains less than 2 of the following eggs maltodextrin salt cinnamon mono and diglycerides modified cornstarch sodium stearoyl lactylate datem rice flour molasses cellulose gel natural and artificial flavor colored with ascorbic acid cellulose gum enzyme vanilla icing colored with artificial flavor",
+      "name": "Cinnamon Streusel Bread",
+      "ingredients": "whole egg sugar all purpose flour butter sour cream light brown sugar cinnamon salt dextrose potassium iodide pure vanilla extract baking soda baking powder",
       "nutrition": {
-        "calories": 163.0,
-        "g_fat": 6.0,
-        "g_carbs": 26.0,
-        "g_protein": 1.0
+        "calories": 195.0,
+        "g_fat": 10.0,
+        "g_carbs": 23.0,
+        "g_protein": 5.0
       },
       "serving_size": {
         "serving_size_amount": "1",
-        "serving_size_unit": "each"
+        "serving_size_unit": "slice"
       },
       "icons": [
         "Milk",
-        "Soy",
         "Wheat",
-        "Egg"
+        "Egg",
+        "Vegetarian"
       ],
       "id": 78
     },
     {
-      "name": "Cranberry Orange Scone",
-      "ingredients": "orange cranberry scone cream eggs butter cranberries dried cranberries sugar baking powder salt orange oil vanilla icing colored with artificial flavor",
+      "name": "Apricot Lemon Bread",
+      "ingredients": "sugar all purpose flour milk dried apricot liquid eggs butter seedless raisins lemon juice baking powder kosher salt lemon zest",
       "nutrition": {
-        "calories": 131.0,
-        "g_fat": 6.0,
-        "g_carbs": 17.0,
-        "g_protein": 1.0
+        "calories": 643.0,
+        "g_fat": 17.0,
+        "g_carbs": 119.0,
+        "g_protein": 9.0
       },
       "serving_size": {
-        "serving_size_amount": "0.25",
-        "serving_size_unit": "each"
+        "serving_size_amount": "1",
+        "serving_size_unit": "slice"
       },
       "icons": [
         "Milk",

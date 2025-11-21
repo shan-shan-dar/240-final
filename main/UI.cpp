@@ -40,6 +40,29 @@ void UI::waitForEnter() {
     cin.get();
 }
 
+// Fetch/generate the menu JSON for a given date and meal type by
+// invoking the Python script menu.py. This ensures that the latest
+// Nutrislice data is available before loading it in C++.
+bool UI::fetchMenuFor(const string& date, const string& mealType) {
+    // Build the base command arguments: date and meal type.
+    string args = " " + date + " " + mealType;
+
+#ifdef _WIN32
+    // On Windows just call `python` and let the environment decide.
+    string cmd = "python menu.py" + args;
+#else
+    // On Unix-like systems, try python3 first, then fall back to python.
+    // Suppress script output so it doesn't clutter the UI.
+    string cmd =
+        "python3 menu.py" + args + " > /dev/null 2>&1"
+        " || python menu.py" + args + " > /dev/null 2>&1";
+#endif
+
+    int result = system(cmd.c_str());
+    (void)result; // We rely on later file loading to detect failures.
+    return true;
+}
+
 // Show the welcome screen with logo and options
 void UI::showWelcomeScreen() {
     const string CYAN = "\033[36m";
@@ -295,7 +318,7 @@ void UI::showMainMenu() {
         cout << "\n";
         printSeparator();
         cout << "\n";
-        cout << "     " << YELLOW << "[1]" << RESET << " View today's menu\n";
+        cout << "     " << YELLOW << "[1]" << RESET << " View menus\n";
         cout << "     " << YELLOW << "[2]" << RESET << " View logged foods\n";
         cout << "     " << YELLOW << "[3]" << RESET << " Log a meal\n";
         cout << "     " << YELLOW << "[4]" << RESET << " Generate meal plan\n";
@@ -423,7 +446,6 @@ void UI::showProfileEditor() {
     }
 }
 
-// Show the daily menu with nutritional information
 void UI::showDailyMenu() {
     const string CYAN = "\033[36m";
     const string YELLOW = "\033[33m";
@@ -431,31 +453,81 @@ void UI::showDailyMenu() {
     const string RED = "\033[31m";
     const string BOLD = "\033[1m";
     const string RESET = "\033[0m";
-    
+
     clearScreen();
-    printHeader("TODAY'S DINING HALL MENU");
-    
-    // Get current date in YYYY-MM-DD format
-    time_t now = time(0);
-    tm* ltm = localtime(&now);
-    char dateStr[100];
-    char friendlyDate[100];
-    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", ltm);
-    strftime(friendlyDate, sizeof(friendlyDate), "%A, %B %d, %Y", ltm);
-    
-    cout << "\n  " << CYAN << BOLD << friendlyDate << RESET << "\n\n";
-    
+    printHeader("VIEW DINING HALL MENUS");
+
+    // Ask user for date
+    cout << "\n";
+    cout << "  Enter date (YYYY-MM-DD): ";
+    string dateStr;
+    cin >> dateStr;
+
+    // Ask user for meal
+    cout << "\n";
+    cout << "     " << YELLOW << "[1]" << RESET << " Breakfast\n";
+    cout << "     " << YELLOW << "[2]" << RESET << " Lunch\n";
+    cout << "     " << YELLOW << "[3]" << RESET << " Dinner\n";
+    cout << "\n";
+    cout << "  >> Meal choice: ";
+    int mealChoice;
+    cin >> mealChoice;
+
+    string mealType;
+    switch (mealChoice) {
+        case 1: mealType = "breakfast"; break;
+        case 2: mealType = "lunch"; break;
+        case 3: mealType = "dinner"; break;
+        default:
+            cout << "\n";
+            printSeparator();
+            cout << "\n  " << RED << "Invalid choice. Returning to main menu." << RESET << "\n";
+            printSeparator();
+            waitForEnter();
+            return;
+    }
+
+    // Call menu.py to fetch/generate JSON for this date + meal
+    fetchMenuFor(dateStr, mealType);
+
+    // Try to get a nice "Friday, November 21, 2025" style date for display
+    string friendlyDateStr = dateStr;
     try {
-        auto menu = menuManager.getDailyMenu("breakfast", dateStr);
-        
+        if (dateStr.size() >= 10) {
+            int year  = stoi(dateStr.substr(0, 4));
+            int month = stoi(dateStr.substr(5, 2));
+            int day   = stoi(dateStr.substr(8, 2));
+            tm t = {};
+            t.tm_year = year - 1900;
+            t.tm_mon  = month - 1;
+            t.tm_mday = day;
+            mktime(&t);
+            char friendlyDate[100];
+            strftime(friendlyDate, sizeof(friendlyDate), "%A, %B %d, %Y", &t);
+            friendlyDateStr = friendlyDate;
+        }
+    } catch (...) {
+        // If parsing fails, just use the raw string.
+        friendlyDateStr = dateStr;
+    }
+
+    clearScreen();
+    printHeader("DINING HALL MENU");
+
+    cout << "\n  " << CYAN << BOLD << friendlyDateStr << RESET
+         << " - " << YELLOW << mealType << RESET << "\n\n";
+
+    try {
+        auto menu = menuManager.getDailyMenu(mealType, dateStr);
+
         if (menu.empty()) {
             cout << "\n";
             printSeparator();
-            cout << "\n  No menu items found for today.\n";
+            cout << "\n  No menu items found for this selection.\n";
             printSeparator();
         } else {
             menuManager.displayMenuTable(menu);
-            
+
             cout << "\n";
             printSeparator();
             cout << "\n  " << GREEN << BOLD << "Your Targets:" << RESET
@@ -472,9 +544,10 @@ void UI::showDailyMenu() {
         cout << "\n  " << RED << BOLD << "ERROR:" << RESET << " " << e.what() << "\n";
         printSeparator();
     }
-    
+
     waitForEnter();
 }
+
 
 // Show the meal plan generator
 void UI::showMealGenerator() {
@@ -549,14 +622,17 @@ void UI::showFoodLogger() {
     if (mealChoice == 4) {
         return;  // Go back to main menu
     }
-    
+
     string mealType;
     switch (mealChoice) {
         case 1: mealType = "breakfast"; break;
         case 2: mealType = "lunch"; break;
         case 3: mealType = "dinner"; break;
     }
-    
+
+    // Fetch/generate the menu JSON for this date and meal before loading it.
+    fetchMenuFor(dateStr, mealType);
+
     // Load menu once
     auto menu = menuManager.getDailyMenu(mealType, dateStr);
     
