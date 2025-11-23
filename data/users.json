@@ -15,6 +15,11 @@
           "Fried Eggs": 3.00,
           "Pork Bao Bun": 1.00
         }
+      },
+      "2025-11-21": {
+        "lunch": {
+          "Texas Toast": 3.00
+        }
       }
     }
   },
@@ -48,6 +53,17 @@
           "Belgian Waffle": 2.00
         }
       }
+    }
+  },
+  {
+    "uid": "USR774574",
+    "username": "ncvt",
+    "password": "123",
+    "calorieGoal": 1500,
+    "proteinRatio": 0.20,
+    "carbsRatio": 0.30,
+    "fatsRatio": 0.50,
+    "loggedMeals": {
     }
   }
 ]
