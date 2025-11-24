@@ -40,5 +40,9 @@
 # debug information files
 *.dwo
 
-# pipelines' results
-pipelines/*.csv
+# pipelines' results & samples
+pipelines/food_pair_scores.csv
+pipelines/sample.csv
+
+# env
+food_env/
