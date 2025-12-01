@@ -1,39 +1,54 @@
 #ifndef UI_H
 #define UI_H
 
-#include "User.h"
-#include "Auth.h"
 #include "MenuManager.h"
+#include "Auth.h"
+#include "User.h"
+#include "AuthUI.h"
+#include "MenuUI.h"
+#include "LoggerUI.h"
+#include "ProfileUI.h"
 #include <string>
+#include <memory>
 
 class UI {
 private:
-    Auth auth;
     MenuManager menuManager;
+    Auth auth;
     User currentUser;
     bool isLoggedIn;
-    
-    void clearScreen();
-    void printHeader(const std::string& title);
-    void printSeparator();
-    void waitForEnter();
 
-    // NEW: run menu.py for a given date + meal
-    bool fetchMenuFor(const std::string& date, const std::string& mealType);
+    // Sub-modules
+    // We use unique_ptr or just members. 
+    // Since they need references to members of this class, we must initialize them in constructor.
+    // But currentUser changes on login. 
+    // The sub-modules hold a reference to currentUser. 
+    // If currentUser is a member of UI, its address is stable? 
+    // Yes, as long as UI is not moved/copied.
     
-    void showWelcomeScreen();
-    void showLoginScreen();
-    void showRegisterScreen();
+    // However, AuthUI needs to update currentUser.
+    // MenuUI needs to read currentUser.
+    
+    // Let's use pointers or references.
+    // If we use members:
+    // AuthUI authUI;
+    // We need to initialize it in initializer list: authUI(auth, currentUser)
+    
+    // But wait, AuthUI constructor takes (Auth&, User&).
+    // So we can do:
+    // UI() : authUI(auth, currentUser), ... {}
+    
+    AuthUI authUI;
+    MenuUI menuUI;
+    LoggerUI loggerUI;
+    ProfileUI profileUI;
+
     void showMainMenu();
-    void showProfileEditor();
-    void showDailyMenu();
-    void showMealGenerator();
-    void showFoodLogger();
-    void showLoggedFoods();
-    
+
 public:
     UI();
     void run();
 };
 
-#endif
+#endif // UI_H
+

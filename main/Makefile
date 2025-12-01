@@ -5,11 +5,11 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -g
 TARGET = meal_tracker
 
 # Source files
-SRCS = main.cpp UI.cpp Auth.cpp MenuManager.cpp
+SRCS = main.cpp UI.cpp Auth.cpp MenuManager.cpp UIUtils.cpp AuthUI.cpp MenuUI.cpp LoggerUI.cpp ProfileUI.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Header files
-HEADERS = User.h UI.h Auth.h MenuManager.h
+HEADERS = User.h UI.h Auth.h MenuManager.h UIUtils.h AuthUI.h MenuUI.h LoggerUI.h ProfileUI.h
 
 # Default target
 all: $(TARGET)

@@ -302,6 +302,35 @@ bool MenuManager::logMeal(User& user, const string& mealType,
     return true;
 }
 
+// Log a specific food item by name
+bool MenuManager::logFoodItem(User& user, const string& mealType,
+                              const string& date, const string& foodName,
+                              double servings) {
+    // Add to existing servings if it exists, otherwise create new entry
+    user.loggedMeals[date][mealType][foodName] += servings;
+    return true;
+}
+
+// Remove a logged meal for a user
+bool MenuManager::removeLoggedMeal(User& user, const string& date, 
+                                   const string& mealType, const string& foodName) {
+    // Check if date exists
+    auto dateIt = user.loggedMeals.find(date);
+    if (dateIt == user.loggedMeals.end()) return false;
+
+    // Check if meal type exists
+    auto mealIt = dateIt->second.find(mealType);
+    if (mealIt == dateIt->second.end()) return false;
+
+    // Check if food exists
+    auto foodIt = mealIt->second.find(foodName);
+    if (foodIt == mealIt->second.end()) return false;
+
+    // Remove it
+    mealIt->second.erase(foodIt);
+    return true;
+}
+
 // Calculate total nutrition for a specific date
 MenuManager::DailyTotals MenuManager::calculateDailyTotals(
     const User& user, const string& date) {

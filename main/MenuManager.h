@@ -33,6 +33,14 @@ public:
     bool logMeal(User& user, const std::string& mealType,
                  const std::string& date, int menuNumber, double servings);
 
+    // Log a specific food item by name (useful for meal plan generation)
+    bool logFoodItem(User& user, const std::string& mealType,
+                     const std::string& date, const std::string& foodName, double servings);
+
+    // Remove a logged meal for a user.
+    bool removeLoggedMeal(User& user, const std::string& date, 
+                          const std::string& mealType, const std::string& foodName);
+
     // Calculate daily nutrition totals.
     struct DailyTotals {
         int calories;
