@@ -39,3 +39,15 @@
 
 # debug information files
 *.dwo
+
+# pipelines' results & samples
+pipelines/food_pair_scores.csv
+pipelines/sample.csv
+
+# env
+food_env/
+# Temporary menu files
+data/menus/*.json
+
+# Executables
+main/meal_tracker
