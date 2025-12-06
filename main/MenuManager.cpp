@@ -1,10 +1,13 @@
 #include "MenuManager.h"
+#include "UIUtils.h"
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 #include <ctime>
 #include <sstream>
+#include <map>
+#include <cmath>
 
 using namespace std;
 
@@ -271,14 +274,155 @@ void MenuManager::displayMenuTable(const vector<FoodItem>& menu) {
 }
 
 // Generate a meal plan optimized for user's goals
-// TODO: Implement meal plan generation algorithm
-vector<FoodItem> MenuManager::generateMealPlan(const User& user) {
-    (void)user; // Suppress unused parameter warning for future implementation
-    vector<FoodItem> mealPlan;
+// Generate a meal plan optimized for user's goals, using today's date
+MenuManager::MealPlanResult MenuManager::generateMealPlan(const User& user) {
+    MealPlanResult result{};
 
-    // Future developer: Implement greedy or optimization algorithm here.
+    // 1. Figure out today's date as "YYYY-MM-DD"
+    time_t now = time(nullptr);
+    tm* ltm = localtime(&now);
+    char dateBuf[11];
+    strftime(dateBuf, sizeof(dateBuf), "%Y-%m-%d", ltm);
+    result.dateStr = dateBuf;
 
-    return mealPlan;
+    // 2. Daily macro goals in grams
+    result.calorieGoal = user.calorieGoal;
+    result.proteinGoal = (user.calorieGoal * user.macroRatio.protein) / 4.0;
+    result.carbsGoal   = (user.calorieGoal * user.macroRatio.carbs)   / 4.0;
+    result.fatsGoal    = (user.calorieGoal * user.macroRatio.fats)    / 9.0;
+
+    // 3. What has already been logged for today?
+    result.loggedTotals = calculateDailyTotals(user, result.dateStr);
+
+    double remainingCalories = user.calorieGoal - result.loggedTotals.calories;
+    double remainingProtein  = result.proteinGoal - result.loggedTotals.protein;
+    double remainingCarbs    = result.carbsGoal   - result.loggedTotals.carbs;
+    double remainingFats     = result.fatsGoal    - result.loggedTotals.fats;
+
+    // 4. Which meals already have any logged items?
+    bool bLogged = false, lLogged = false, dLogged = false;
+    auto dateIt = user.loggedMeals.find(result.dateStr);
+    if (dateIt != user.loggedMeals.end()) {
+        const auto& dayLog = dateIt->second;
+        auto itB = dayLog.find("breakfast");
+        if (itB != dayLog.end() && !itB->second.empty()) bLogged = true;
+        auto itL = dayLog.find("lunch");
+        if (itL != dayLog.end() && !itL->second.empty()) lLogged = true;
+        auto itD = dayLog.find("dinner");
+        if (itD != dayLog.end() && !itD->second.empty()) dLogged = true;
+    }
+
+    result.mealLogged["breakfast"] = bLogged;
+    result.mealLogged["lunch"]     = lLogged;
+    result.mealLogged["dinner"]    = dLogged;
+
+    // 5. Define meal budgets for remaining meals (30/40/30 split)
+    struct MealTargets {
+        double calories;
+        double protein;
+        double carbs;
+        double fats;
+    };
+
+    std::map<std::string, MealTargets> mealBudgets;
+
+    double bWeight = 0.3, lWeight = 0.4, dWeight = 0.3;
+    double totalWeight = 0.0;
+
+    if (!bLogged) totalWeight += bWeight;
+    if (!lLogged) totalWeight += lWeight;
+    if (!dLogged) totalWeight += dWeight;
+
+    if (totalWeight > 0.0) {
+        if (!bLogged) {
+            double ratio = bWeight / totalWeight;
+            mealBudgets["breakfast"] = {
+                remainingCalories * ratio,
+                remainingProtein  * ratio,
+                remainingCarbs    * ratio,
+                remainingFats     * ratio
+            };
+        }
+        if (!lLogged) {
+            double ratio = lWeight / totalWeight;
+            mealBudgets["lunch"] = {
+                remainingCalories * ratio,
+                remainingProtein  * ratio,
+                remainingCarbs    * ratio,
+                remainingFats     * ratio
+            };
+        }
+        if (!dLogged) {
+            double ratio = dWeight / totalWeight;
+            mealBudgets["dinner"] = {
+                remainingCalories * ratio,
+                remainingProtein  * ratio,
+                remainingCarbs    * ratio,
+                remainingFats     * ratio
+            };
+        }
+    } else {
+        // All meals already logged or no remaining budget – nothing to plan.
+        return result;
+    }
+
+    // 6. Ensure menus for today exist (calls Python script via UIUtils)
+    UIUtils::fetchMenuFor(result.dateStr, "breakfast");
+    UIUtils::fetchMenuFor(result.dateStr, "lunch");
+    UIUtils::fetchMenuFor(result.dateStr, "dinner");
+
+    std::map<std::string, std::vector<FoodItem>> allMenus;
+    allMenus["breakfast"] = getDailyMenu("breakfast", result.dateStr);
+    allMenus["lunch"]     = getDailyMenu("lunch",     result.dateStr);
+    allMenus["dinner"]    = getDailyMenu("dinner",    result.dateStr);
+
+    if (allMenus["breakfast"].empty() &&
+        allMenus["lunch"].empty() &&
+        allMenus["dinner"].empty()) {
+        // No menus available at all.
+        return result;
+    }
+
+    // 7. Algorithm: pick the best-fitting item for each meal's budget
+    for (const auto& budgetPair : mealBudgets) {
+        const std::string& mealType = budgetPair.first;
+        const MealTargets& targets  = budgetPair.second;
+        const std::vector<FoodItem>& currentMenu = allMenus[mealType];
+
+        if (currentMenu.empty()) continue;
+
+        FoodItem bestItemForMeal;
+        double bestScore = -1.0;
+
+        for (const auto& item : currentMenu) {
+            // Score based on how well the item fits this meal's budget.
+            double calorieScore = 1.0 - (std::fabs(item.calories - targets.calories) /
+                                         std::max(targets.calories, 1.0));
+            double proteinScore = 1.0 - (std::fabs(item.protein - targets.protein) /
+                                         std::max(targets.protein, 1.0));
+            double carbsScore   = 1.0 - (std::fabs(item.carbs   - targets.carbs) /
+                                         std::max(targets.carbs,   1.0));
+            double fatsScore    = 1.0 - (std::fabs(item.fats    - targets.fats) /
+                                         std::max(targets.fats,    1.0));
+
+            // Weighted average; calories most important (matches old UI logic).
+            double finalScore =
+                0.5  * calorieScore +
+                0.2  * proteinScore +
+                0.15 * carbsScore   +
+                0.15 * fatsScore;
+
+            if (finalScore > bestScore) {
+                bestScore = finalScore;
+                bestItemForMeal = item;
+            }
+        }
+
+        // Store best item for this meal type
+        result.selectedMeals[mealType] = bestItemForMeal;
+    }
+
+    return result;
 }
 
 // Log a meal item for a user

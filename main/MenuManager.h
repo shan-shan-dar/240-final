@@ -4,6 +4,7 @@
 #include "User.h"
 #include <string>
 #include <vector>
+#include <map>
 
 class MenuManager {
 private:
@@ -26,8 +27,35 @@ public:
     // Formatted table display with stations and macros.
     void displayMenuTable(const std::vector<FoodItem>& menu);
 
-    // Placeholder for future optimization-based meal planning.
-    std::vector<FoodItem> generateMealPlan(const User& user);
+    // Calculate daily nutrition totals.
+    struct DailyTotals {
+        int calories;
+        double protein;
+        double carbs;
+        double fats;
+    };
+
+    // Meal-plan result returned by MenuManager.
+    struct MealPlanResult {
+        std::string dateStr;   // "YYYY-MM-DD" for which the plan was generated
+
+        int calorieGoal;
+        double proteinGoal;
+        double carbsGoal;
+        double fatsGoal;
+
+        DailyTotals loggedTotals;  // what the user has already logged for that date
+
+        // Which meals already have any logged food: "breakfast", "lunch", "dinner"
+        std::map<std::string, bool> mealLogged;
+
+        // Recommended one item per meal type (only for meals that are not logged).
+        // Keys: "breakfast", "lunch", "dinner".
+        std::map<std::string, FoodItem> selectedMeals;
+    };
+
+    // Generate a meal plan optimized for the user's current day and goals.
+    MealPlanResult generateMealPlan(const User& user);
 
     // Log a meal choice for a user.
     bool logMeal(User& user, const std::string& mealType,
@@ -41,13 +69,7 @@ public:
     bool removeLoggedMeal(User& user, const std::string& date, 
                           const std::string& mealType, const std::string& foodName);
 
-    // Calculate daily nutrition totals.
-    struct DailyTotals {
-        int calories;
-        double protein;
-        double carbs;
-        double fats;
-    };
+    
     DailyTotals calculateDailyTotals(const User& user, const std::string& date);
 };
 

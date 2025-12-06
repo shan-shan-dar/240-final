@@ -13,6 +13,38 @@ MEAL_TYPES = {"breakfast", "lunch", "dinner"}
 
 DESTINATION_FOLDER = '../data/menus'
 
+# Stations to drop when simplifying menus for meal-generation logic.
+# You can edit these lists as needed.
+EXCLUDED_STATIONS_CONFIG = {
+    "breakfast": {
+        # Station names to remove if they match exactly
+        "exact": [
+            "Omelet Station",
+            "Yogurt & Oatmeal Bar",
+            "Avocado Bar",
+            "Toasted",
+            "Nut Zone",
+            "Condiment",
+        ],
+        # Substrings to remove if they appear anywhere in the station name
+        "contains": [],
+    },
+    "lunch_dinner": {
+        "exact": [
+            "Panini",
+            "Campus Deli",
+            "Salad Bar",
+            "Condiment",
+            "Toasted",
+            "Nut Zone",
+            "Avocado Bar",
+        ],
+        # e.g. "Daily Bite" should match "Daily Bite", "Daily Bite - Chef's Choice", etc.
+        "contains": ["Daily Bite"],
+    },
+}
+
+
 def fetch_menu(dining_hall: str, meal_type: str, date: datetime):
     """
     Call Nutrislice weekly menu API for a given dining hall, meal type, and date.
@@ -158,6 +190,84 @@ def generate_extracted_file(date_str: str, meal_type: str, output_dir: str = DES
         json.dump(extracted, f, indent=2)
 
     print(f"Saved extracted menu to {out_path}")
+
+def simplify_menu_file(
+    menu_filename: str,
+    destination_folder: str = DESTINATION_FOLDER,
+) -> str:
+    """
+    Create a simplified version of a Nutrislice-extracted menu JSON.
+
+    - menu_filename: e.g. "lunch-2025-11-20.json" or a full path
+    - destination_folder: where to look for it if menu_filename is just a name
+
+    Writes: simplified-{original name}.json in the same directory.
+    Returns: absolute path to the simplified file.
+    """
+    # Resolve source path
+    if not os.path.isabs(menu_filename) and os.sep not in menu_filename:
+        # Just a bare name: assume it lives under DESTINATION_FOLDER
+        src_path = os.path.join(destination_folder, menu_filename)
+    else:
+        # Already a path: use it directly
+        src_path = menu_filename
+        destination_folder = os.path.dirname(src_path)
+
+    src_path = os.path.abspath(src_path)
+    destination_folder = os.path.abspath(destination_folder)
+
+    if not os.path.exists(src_path):
+        raise FileNotFoundError(src_path)
+
+    with open(src_path, "r") as f:
+        data = json.load(f)
+
+    # Infer category (breakfast vs lunch/dinner) from filename prefix
+    base = os.path.basename(src_path)
+    if base.startswith("breakfast-"):
+        category = "breakfast"
+    elif base.startswith("lunch-") or base.startswith("dinner-"):
+        category = "lunch_dinner"
+    else:
+        category = None  # fall back to leaving data unchanged
+
+    # Filter out unwanted stations
+    if isinstance(data, dict) and category is not None:
+        rules = EXCLUDED_STATIONS_CONFIG.get(category, {})
+        exact = set(rules.get("exact", []))
+        contains = list(rules.get("contains", []))
+
+        simplified = {}
+        for station, items in data.items():
+            # Keep any non-list top-level keys as-is (e.g. global "icons" etc.)
+            if not isinstance(items, list):
+                simplified[station] = items
+                continue
+
+            st_name = station.strip()
+
+            # Exact matches
+            if st_name in exact:
+                continue
+
+            # Substring matches ("Daily Bite" etc.)
+            if any(substr in st_name for substr in contains):
+                continue
+
+            simplified[station] = items
+    else:
+        # If we can't identify the category or the structure is unexpected,
+        # leave the JSON untouched.
+        simplified = data
+
+    out_name = f"simplified-{base}"
+    out_path = os.path.join(destination_folder, out_name)
+
+    with open(out_path, "w") as f:
+        json.dump(simplified, f, indent=2)
+
+    return out_path
+
 
 
 if __name__ == "__main__":
