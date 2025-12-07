@@ -15,7 +15,7 @@ def solve_meal_plan(menu, target, verbose: bool = True):
     ])
 
     # --- Define Serving Sizes ---
-    serving_sizes = np.arange(0.5, 5, 0.5)
+    serving_sizes = np.arange(0.5, 3.5, 0.5)
     n_sizes = len(serving_sizes)
 
     # --- Construct Items & Macro Matrix ---
