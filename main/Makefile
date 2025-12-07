@@ -21,13 +21,18 @@ all: solver-env $(TARGET)
 
 # Create / update local Python virtualenv with required deps
 solver-env:
+	@echo ">> Ensuring Python virtualenv and dependencies"
 	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Creating Python virtualenv in $(VENV_DIR)..."; \
-		$(PYTHON) -m venv $(VENV_DIR); \
-		echo "Installing Python dependencies (cvxpy, numpy, pandas)..."; \
-		"$(VENV_PIP)" install cvxpy numpy pandas >/dev/null; \
-		echo "✓ Python environment ready."; \
+		echo "Creating Python virtualenv in $(VENV_DIR)"; \
+		$(PYTHON) -m venv $(VENV_DIR) || { echo "Error: failed to create venv."; exit 1; }; \
 	fi
+	@echo "Installing Python dependencies (cvxpy, ecos, numpy, pandas, requests) into $(VENV_DIR) (this takes a bit, but only happens once)"
+	@"$(VENV_PIP)" install cvxpy ecos numpy pandas requests >/dev/null 2>&1 || { \
+		echo "Error: failed to install Python dependencies (cvxpy, numpy, pandas, requests)."; \
+		echo "       Try running: $(VENV_PIP) install cvxpy numpy pandas requests"; \
+		exit 1; \
+	}
+	@echo "✓ Python environment ready."
 
 # Link object files to create executable
 $(TARGET): $(OBJS)
@@ -61,7 +66,8 @@ clean:
 # Clean everything including data
 cleanall: clean
 	rm -rf ../data
-	@echo "✓ Cleaned all files including data"
+	rm -rf $(VENV_DIR)
+	@echo "✓ Cleaned all files including data and virtualenv"
 
 # Run the program (also ensures env exists)
 run: solver-env $(TARGET)
@@ -74,9 +80,12 @@ install: setup all
 help:
 	@echo "Macro Meal Tracker - Makefile Commands"
 	@echo "======================================"
-	@echo "make          - Build the project (and set up Python venv if needed)"
+	@echo "make          - Build the project (and set up Python venv+deps)"
 	@echo "make run      - Build and run the program"
 	@echo "make setup    - Create data directory and files"
 	@echo "make install  - Setup and build"
 	@echo "make clean    - Remove build files"
-	@echo "make cleanall
+	@echo "make cleanall - Remove build files, data, and virtualenv"
+	@echo "make help     - Show this help message"
+
+.PHONY: all clean cleanall run setup install help solver-env
