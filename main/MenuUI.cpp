@@ -204,21 +204,47 @@ void MenuUI::showMealGenerator() {
         }
 
         auto itSel = plan.selectedMeals.find(mealType);
-        if (itSel != plan.selectedMeals.end()) {
-            const FoodItem& item = itSel->second;
-
-            cout << "  " << YELLOW << "⦿ " << mealName << ": " << RESET << BOLD << item.name << RESET << "\n";
-            cout << "    "
-                 << GREEN  << item.calories << " cal" << RESET << " | "
-                 << YELLOW << "P:" << static_cast<int>(item.protein) << "g" << RESET << " "
-                 << GREEN  << "C:" << static_cast<int>(item.carbs)   << "g" << RESET << " "
-                 << CYAN   << "F:" << static_cast<int>(item.fats)    << "g" << RESET << "\n\n";
-
-            totalCalories += item.calories;
-            totalProtein  += item.protein;
-            totalCarbs    += item.carbs;
-            totalFats     += item.fats;
+        if (itSel == plan.selectedMeals.end() || itSel->second.empty()) {
+            continue;
         }
+
+        const auto& plannedItems = itSel->second;
+
+        cout << "  " << YELLOW << "⦿ " << mealName << ":" << RESET << "\n";
+
+        for (const auto& planned : plannedItems) {
+            const FoodItem& item = planned.item;
+            double servings = planned.servings;
+
+            // Convert solver "servings" into physical units:
+            // totalAmount = servings * serving_size_amount
+            double baseAmount = 1.0;
+            try {
+                if (!item.servingAmount.empty()) {
+                    baseAmount = std::stod(item.servingAmount);
+                }
+            } catch (...) {
+                baseAmount = 1.0; // fall back if parsing fails
+            }
+            double totalAmount = baseAmount * servings;
+
+            cout << "    - " << BOLD << item.name << RESET
+                 << "  x " << fixed << setprecision(2) << totalAmount
+                 << " " << item.servingUnit
+                 << "  (" << item.calories * servings  << " cal"
+                 << ", " << static_cast<int>(item.protein) * servings << "g protein"
+                 << ", " << static_cast<int>(item.carbs) * servings  << "g carbs"
+                 << ", " << static_cast<int>(item.fats) * servings  << "g fat"
+                 << ")\n";
+
+            // Totals are still in "solver servings" units, same as before
+            totalCalories += item.calories * servings;
+            totalProtein  += item.protein  * servings;
+            totalCarbs    += item.carbs    * servings;
+            totalFats     += item.fats     * servings;
+        }
+
+        cout << "\n";
     }
 
     // 5. Plan summary
@@ -241,8 +267,8 @@ void MenuUI::showMealGenerator() {
     if (response == 'y' || response == 'Y') {
         cout << "\n";
         for (const auto& pair : plan.selectedMeals) {
-            const string& mType    = pair.first;
-            const FoodItem& item   = pair.second;
+            const string& mType = pair.first;
+            const auto& items   = pair.second;
 
             // Skip logging for meals already logged
             auto itLogged = plan.mealLogged.find(mType);
@@ -250,11 +276,18 @@ void MenuUI::showMealGenerator() {
                 continue;
             }
 
-            menuManager.logFoodItem(currentUser, mType, plan.dateStr, item.name, 1.0);
-
             string displayMeal = mType;
             displayMeal[0] = toupper(displayMeal[0]);
-            cout << "  " << GREEN << "✓ Added " << displayMeal << ": " << RESET << item.name << "\n";
+
+            for (const auto& planned : items) {
+                const FoodItem& item = planned.item;
+                double servings      = planned.servings;
+
+                menuManager.logFoodItem(currentUser, mType, plan.dateStr, item.name, servings);
+
+                cout << "  " << GREEN << "✓ Added " << displayMeal << ": " << RESET
+                     << item.name << "  (x " << fixed << setprecision(2) << servings << ")\n";
+            }
         }
         auth.updateUser(currentUser);
         cout << "\n  " << GREEN << "Successfully added meal plan to your log!" << RESET << "\n";

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <map>
 #include <cmath>
+#include <cstdlib>
 
 using namespace std;
 
@@ -162,18 +163,8 @@ vector<FoodItem> MenuManager::loadMenuFromFile(const string& filename) {
                     unitStr = trim(unitStr);
                     item.servingUnit = unitStr;
 
-                    // Convert nutrition to per-serving values
-                    try {
-                        double servingCount = stod(item.servingAmount);
-                        if (servingCount > 0) {
-                            item.calories = static_cast<int>(item.calories / servingCount);
-                            item.protein = item.protein / servingCount;
-                            item.carbs = item.carbs / servingCount;
-                            item.fats = item.fats / servingCount;
-                        }
-                    } catch (...) {
-                        // If parsing fails, keep original values
-                    }
+                    // NOTE david: Nutrislice nutrition values are already per serving,
+                    // so we do NOT rescale them by servingAmount here.
                 } else {
                     item.servingAmount = "1";
                     item.servingUnit = "serving";
@@ -273,12 +264,11 @@ void MenuManager::displayMenuTable(const vector<FoodItem>& menu) {
     }
 }
 
-// Generate a meal plan optimized for user's goals
 // Generate a meal plan optimized for user's goals, using today's date
 MenuManager::MealPlanResult MenuManager::generateMealPlan(const User& user) {
     MealPlanResult result{};
 
-    // 1. Figure out today's date as "YYYY-MM-DD"
+    // 1. Today's date as "YYYY-MM-DD"
     time_t now = time(nullptr);
     tm* ltm = localtime(&now);
     char dateBuf[11];
@@ -291,10 +281,10 @@ MenuManager::MealPlanResult MenuManager::generateMealPlan(const User& user) {
     result.carbsGoal   = (user.calorieGoal * user.macroRatio.carbs)   / 4.0;
     result.fatsGoal    = (user.calorieGoal * user.macroRatio.fats)    / 9.0;
 
-    // 3. What has already been logged for today?
+    // 3. Already-logged totals for today
     result.loggedTotals = calculateDailyTotals(user, result.dateStr);
 
-    double remainingCalories = user.calorieGoal - result.loggedTotals.calories;
+    double remainingCalories = result.calorieGoal - result.loggedTotals.calories;
     double remainingProtein  = result.proteinGoal - result.loggedTotals.protein;
     double remainingCarbs    = result.carbsGoal   - result.loggedTotals.carbs;
     double remainingFats     = result.fatsGoal    - result.loggedTotals.fats;
@@ -316,7 +306,7 @@ MenuManager::MealPlanResult MenuManager::generateMealPlan(const User& user) {
     result.mealLogged["lunch"]     = lLogged;
     result.mealLogged["dinner"]    = dLogged;
 
-    // 5. Define meal budgets for remaining meals (30/40/30 split)
+    // 5. Per-meal budgets for remaining meals (30/40/30 split across unlogged meals)
     struct MealTargets {
         double calories;
         double protein;
@@ -333,97 +323,147 @@ MenuManager::MealPlanResult MenuManager::generateMealPlan(const User& user) {
     if (!lLogged) totalWeight += lWeight;
     if (!dLogged) totalWeight += dWeight;
 
-    if (totalWeight > 0.0) {
-        if (!bLogged) {
-            double ratio = bWeight / totalWeight;
-            mealBudgets["breakfast"] = {
-                remainingCalories * ratio,
-                remainingProtein  * ratio,
-                remainingCarbs    * ratio,
-                remainingFats     * ratio
-            };
-        }
-        if (!lLogged) {
-            double ratio = lWeight / totalWeight;
-            mealBudgets["lunch"] = {
-                remainingCalories * ratio,
-                remainingProtein  * ratio,
-                remainingCarbs    * ratio,
-                remainingFats     * ratio
-            };
-        }
-        if (!dLogged) {
-            double ratio = dWeight / totalWeight;
-            mealBudgets["dinner"] = {
-                remainingCalories * ratio,
-                remainingProtein  * ratio,
-                remainingCarbs    * ratio,
-                remainingFats     * ratio
-            };
-        }
-    } else {
+    if (totalWeight <= 0.0) {
         // All meals already logged or no remaining budget – nothing to plan.
         return result;
     }
 
-    // 6. Ensure menus for today exist (calls Python script via UIUtils)
-    UIUtils::fetchMenuFor(result.dateStr, "breakfast");
-    UIUtils::fetchMenuFor(result.dateStr, "lunch");
-    UIUtils::fetchMenuFor(result.dateStr, "dinner");
+    auto clamp = [](double x) { return x < 0.0 ? 0.0 : x; };
 
-    std::map<std::string, std::vector<FoodItem>> allMenus;
-    allMenus["breakfast"] = getDailyMenu("breakfast", result.dateStr);
-    allMenus["lunch"]     = getDailyMenu("lunch",     result.dateStr);
-    allMenus["dinner"]    = getDailyMenu("dinner",    result.dateStr);
-
-    if (allMenus["breakfast"].empty() &&
-        allMenus["lunch"].empty() &&
-        allMenus["dinner"].empty()) {
-        // No menus available at all.
-        return result;
+    if (!bLogged) {
+        double ratio = bWeight / totalWeight;
+        mealBudgets["breakfast"] = {
+            clamp(remainingCalories * ratio),
+            clamp(remainingProtein  * ratio),
+            clamp(remainingCarbs    * ratio),
+            clamp(remainingFats     * ratio)
+        };
+    }
+    if (!lLogged) {
+        double ratio = lWeight / totalWeight;
+        mealBudgets["lunch"] = {
+            clamp(remainingCalories * ratio),
+            clamp(remainingProtein  * ratio),
+            clamp(remainingCarbs    * ratio),
+            clamp(remainingFats     * ratio)
+        };
+    }
+    if (!dLogged) {
+        double ratio = dWeight / totalWeight;
+        mealBudgets["dinner"] = {
+            clamp(remainingCalories * ratio),
+            clamp(remainingProtein  * ratio),
+            clamp(remainingCarbs    * ratio),
+            clamp(remainingFats     * ratio)
+        };
     }
 
-    // 7. Algorithm: pick the best-fitting item for each meal's budget
+    // 6. For each meal budget, use menu.py simplification + solver.py
     for (const auto& budgetPair : mealBudgets) {
         const std::string& mealType = budgetPair.first;
         const MealTargets& targets  = budgetPair.second;
-        const std::vector<FoodItem>& currentMenu = allMenus[mealType];
 
-        if (currentMenu.empty()) continue;
+        // Ensure the full Nutrislice menu JSON exists (normal, unsimplified)
+        UIUtils::fetchMenuFor(result.dateStr, mealType);
 
-        FoodItem bestItemForMeal;
-        double bestScore = -1.0;
+        // Filenames under ../data/menus relative to the main/ directory
+        std::string baseFilename       = mealType + "-" + result.dateStr + ".json";
+        std::string simplifiedFilename = "simplified-" + baseFilename;
+        std::string simplifiedPath     = "../data/menus/" + simplifiedFilename;
+        std::string planPath           = "../data/menus/plan-" + mealType + "-" + result.dateStr + ".txt";
 
-        for (const auto& item : currentMenu) {
-            // Score based on how well the item fits this meal's budget.
-            double calorieScore = 1.0 - (std::fabs(item.calories - targets.calories) /
-                                         std::max(targets.calories, 1.0));
-            double proteinScore = 1.0 - (std::fabs(item.protein - targets.protein) /
-                                         std::max(targets.protein, 1.0));
-            double carbsScore   = 1.0 - (std::fabs(item.carbs   - targets.carbs) /
-                                         std::max(targets.carbs,   1.0));
-            double fatsScore    = 1.0 - (std::fabs(item.fats    - targets.fats) /
-                                         std::max(targets.fats,    1.0));
+        // 6a. Use project-local virtualenv Python to create the simplified JSON.
+#ifndef _WIN32
+        const std::string PY = "../.venv/bin/python";
 
-            // Weighted average; calories most important (matches old UI logic).
-            double finalScore =
-                0.5  * calorieScore +
-                0.2  * proteinScore +
-                0.15 * carbsScore   +
-                0.15 * fatsScore;
+        std::string simplifyCmd =
+            PY + " -c \"from menu import simplify_menu_file; "
+            "simplify_menu_file('" + baseFilename + "')\""
+            " > /dev/null 2>&1";
+#else
+        std::string simplifyCmd =
+            "python -c \"from menu import simplify_menu_file; "
+            "simplify_menu_file('" + baseFilename + "')\""
+            " > NUL 2>&1";
+#endif
 
-            if (finalScore > bestScore) {
-                bestScore = finalScore;
-                bestItemForMeal = item;
-            }
+        int simplifyStatus = std::system(simplifyCmd.c_str());
+        if (simplifyStatus != 0) {
+            std::cerr << "Error: simplify_menu_file failed for "
+                    << baseFilename
+                    << " with status " << simplifyStatus << std::endl;
+            continue;  // skip this mealType
         }
 
-        // Store best item for this meal type
-        result.selectedMeals[mealType] = bestItemForMeal;
+        // 6b. Call solver.py on the simplified JSON with this meal's macro targets
+        std::ostringstream targetStream;
+        targetStream << targets.calories << " "
+                    << targets.protein  << " "
+                    << targets.carbs    << " "
+                    << targets.fats;
+
+#ifndef _WIN32
+        std::string solverCmd =
+            PY + " solver.py \"" + simplifiedPath + "\" " + targetStream.str() +
+            " > \"" + planPath + "\" 2>/dev/null";
+#else
+        std::string solverCmd =
+            "python solver.py \"" + simplifiedPath + "\" " + targetStream.str() +
+            " > \"" + planPath + "\" 2>NUL";
+#endif
+
+        int solverStatus = std::system(solverCmd.c_str());
+        if (solverStatus != 0) {
+            std::cerr << "Error: solver.py failed for "
+                    << simplifiedPath
+                    << " with status " << solverStatus << std::endl;
+            continue;  // skip this mealType
+        }
+
+        // 6c. Parse the solver output: each line "name<TAB>servings"
+        std::ifstream planFile(planPath);
+        if (!planFile.is_open()) {
+            continue;
+        }
+
+        // Load the full (unsimplified) menu to get proper FoodItem metadata
+        std::vector<FoodItem> fullMenu = getDailyMenu(mealType, result.dateStr);
+        if (fullMenu.empty()) {
+            continue;
+        }
+
+        std::string line;
+        while (std::getline(planFile, line)) {
+            if (line.empty()) continue;
+            size_t tabPos = line.find('\t');
+            if (tabPos == std::string::npos) continue;
+
+            std::string itemName    = line.substr(0, tabPos);
+            std::string servingsStr = line.substr(tabPos + 1);
+
+            try {
+                double servings = std::stod(servingsStr);
+
+                auto it = std::find_if(
+                    fullMenu.begin(), fullMenu.end(),
+                    [&](const FoodItem& fi) { return fi.name == itemName; }
+                );
+                if (it != fullMenu.end() && servings > 0.0) {
+                    MealPlanResult::PlannedItem planned;
+                    planned.item     = *it;
+                    planned.servings = servings;
+                    result.selectedMeals[mealType].push_back(planned);
+                }
+            } catch (...) {
+                // Ignore malformed lines
+                continue;
+            }
+        }
     }
 
     return result;
 }
+
 
 // Log a meal item for a user
 bool MenuManager::logMeal(User& user, const string& mealType,

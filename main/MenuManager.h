@@ -49,9 +49,15 @@ public:
         // Which meals already have any logged food: "breakfast", "lunch", "dinner"
         std::map<std::string, bool> mealLogged;
 
-        // Recommended one item per meal type (only for meals that are not logged).
+        // One planned item = (FoodItem + number of servings)
+        struct PlannedItem {
+            FoodItem item;
+            double servings;
+        };
+
+        // Recommended items per meal type (only for meals that are not logged).
         // Keys: "breakfast", "lunch", "dinner".
-        std::map<std::string, FoodItem> selectedMeals;
+        std::map<std::string, std::vector<PlannedItem>> selectedMeals;
     };
 
     // Generate a meal plan optimized for the user's current day and goals.

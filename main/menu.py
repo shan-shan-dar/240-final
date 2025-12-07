@@ -231,7 +231,7 @@ def simplify_menu_file(
     else:
         category = None  # fall back to leaving data unchanged
 
-    # Filter out unwanted stations
+    # First pass: filter out unwanted stations
     if isinstance(data, dict) and category is not None:
         rules = EXCLUDED_STATIONS_CONFIG.get(category, {})
         exact = set(rules.get("exact", []))
@@ -259,6 +259,31 @@ def simplify_menu_file(
         # If we can't identify the category or the structure is unexpected,
         # leave the JSON untouched.
         simplified = data
+
+    # Second pass: deduplicate items by name across ALL stations
+    if isinstance(simplified, dict):
+        seen_names = set()
+        for station, items in simplified.items():
+            if not isinstance(items, list):
+                continue
+
+            deduped = []
+            for item in items:
+                name = (item.get("name") or "").strip()
+                if not name:
+                    # keep nameless items just in case
+                    deduped.append(item)
+                    continue
+
+                key = name.lower()
+                if key in seen_names:
+                    # Skip duplicate-by-name item
+                    continue
+
+                seen_names.add(key)
+                deduped.append(item)
+
+            simplified[station] = deduped
 
     out_name = f"simplified-{base}"
     out_path = os.path.join(destination_folder, out_name)
