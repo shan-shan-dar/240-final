@@ -57,3 +57,6 @@ unused_test_files/
 
 .venv/
 .vscode/
+
+main/__pycache__/
+.nfs*
