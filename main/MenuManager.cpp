@@ -226,19 +226,39 @@ void MenuManager::displayMenuTable(const vector<FoodItem>& menu) {
             cout << "  " << string(95, '-') << "\n";
             cout << "  " << setw(5) << left << "#"
                  << "| " << setw(22) << "Name"
-                 << "| " << setw(12) << "Cals/Serving"
+                 << "| " << setw(12) << "Cals/Unit"
                  << "| " << setw(12) << "Protein(g)"
                  << "| " << setw(11) << "Carbs(g)"
                  << "| " << setw(10) << "Fats(g)" << "\n";
             cout << "  " << string(95, '-') << "\n";
         }
 
-        string calDisplay = to_string(item.calories) + "/" + item.servingUnit;
+        // Show macros per unit instead of per serving.
+        double amount = 1.0;
+        try {
+            if (!item.servingAmount.empty()) {
+                amount = std::stod(item.servingAmount);
+                if (amount <= 0.0) {
+                    amount = 1.0;
+                }
+            }
+        } catch (...) {
+            amount = 1.0;
+        }
 
-        stringstream proteinDisplay, carbsDisplay, fatsDisplay;
-        proteinDisplay << fixed << setprecision(1) << item.protein;
-        carbsDisplay   << fixed << setprecision(1) << item.carbs;
-        fatsDisplay    << fixed << setprecision(1) << item.fats;
+        double calPerUnit     = static_cast<double>(item.calories) / amount;
+        double proteinPerUnit = item.protein / amount;
+        double carbsPerUnit   = item.carbs   / amount;
+        double fatsPerUnit    = item.fats    / amount;
+
+        std::ostringstream proteinDisplay, carbsDisplay, fatsDisplay;
+        proteinDisplay << fixed << setprecision(1) << proteinPerUnit << "g";
+        carbsDisplay   << fixed << setprecision(1) << carbsPerUnit   << "g";
+        fatsDisplay    << fixed << setprecision(1) << fatsPerUnit    << "g";
+
+        // Round calories to an int for display
+        int calInt = static_cast<int>(std::round(calPerUnit));
+        std::string calDisplay = std::to_string(calInt) + "/" + item.servingUnit;
 
         cout << "  " << YELLOW << "[" << setw(3) << itemNum << "]" << RESET
              << "| " << setw(22) << left << item.name.substr(0, 21)
