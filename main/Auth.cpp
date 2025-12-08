@@ -8,21 +8,20 @@
 
 using namespace std;
 
-// Constructor - load existing users from file
+// Creates an Auth manager and loads existing users from disk.
 Auth::Auth(const string& filepath) : usersFilePath(filepath) {
     loadUsers();
 }
 
-// Generate a unique user ID (USR + 6 random digits)
+// Generates a unique user ID with the form "USR" + 6 digits.
 string Auth::generateUID() {
     random_device rd;
     mt19937 gen(rd());
     uniform_int_distribution<> dis(100000, 999999);
-    
+
     string uid;
     bool unique = false;
-    
-    // Keep generating until we get a unique ID
+
     while (!unique) {
         uid = "USR" + to_string(dis(gen));
         unique = true;
@@ -33,48 +32,47 @@ string Auth::generateUID() {
             }
         }
     }
-    
+
     return uid;
 }
 
-// Load all users from the JSON file
+// Loads all users from the JSON file into memory.
 void Auth::loadUsers() {
     ifstream file(usersFilePath);
     if (!file.is_open()) {
         return;
     }
-    
+
     users.clear();
     string line;
-    
-    // Skip opening bracket
-    getline(file, line);
-    
+
+    getline(file, line);  // skip opening "["
+
     while (getline(file, line)) {
         if (line.find("\"uid\"") != string::npos) {
             User user;
-            
-            // Parse UID
+
+            // Parse uid.
             size_t start = line.find(":") + 1;
             size_t end = line.find_last_of("\"");
             start = line.find("\"", start) + 1;
             user.uid = line.substr(start, end - start);
-            
-            // Parse username
+
+            // Parse username.
             getline(file, line);
             start = line.find(":") + 1;
             end = line.find_last_of("\"");
             start = line.find("\"", start) + 1;
             user.username = line.substr(start, end - start);
-            
-            // Parse password
+
+            // Parse password.
             getline(file, line);
             start = line.find(":") + 1;
             end = line.find_last_of("\"");
             start = line.find("\"", start) + 1;
             user.password = line.substr(start, end - start);
-            
-            // Parse calorie goal
+
+            // Parse calorie goal.
             getline(file, line);
             start = line.find(":") + 1;
             string calStr = line.substr(start);
@@ -83,8 +81,8 @@ void Auth::loadUsers() {
                 calStr = calStr.substr(0, commaPos);
             }
             user.calorieGoal = stoi(calStr);
-            
-            // Parse protein ratio
+
+            // Parse protein ratio.
             getline(file, line);
             start = line.find(":") + 1;
             string proteinStr = line.substr(start);
@@ -93,8 +91,8 @@ void Auth::loadUsers() {
                 proteinStr = proteinStr.substr(0, commaPos);
             }
             user.macroRatio.protein = stod(proteinStr);
-            
-            // Parse carbs ratio
+
+            // Parse carbs ratio.
             getline(file, line);
             start = line.find(":") + 1;
             string carbsStr = line.substr(start);
@@ -103,8 +101,8 @@ void Auth::loadUsers() {
                 carbsStr = carbsStr.substr(0, commaPos);
             }
             user.macroRatio.carbs = stod(carbsStr);
-            
-            // Parse fats ratio
+
+            // Parse fats ratio.
             getline(file, line);
             start = line.find(":") + 1;
             string fatsStr = line.substr(start);
@@ -113,37 +111,29 @@ void Auth::loadUsers() {
                 fatsStr = fatsStr.substr(0, commaPos);
             }
             user.macroRatio.fats = stod(fatsStr);
-            
-            // Parse loggedMeals (optional - skip if not present)
+
+            // Parse optional loggedMeals structure.
             user.loggedMeals.clear();
             getline(file, line);
             if (line.find("loggedMeals") != string::npos) {
-                // Note: opening brace { is on same line as "loggedMeals": {
                 while (getline(file, line) && line.find("}") == string::npos) {
                     if (line.find("\"") != string::npos && line.find(":") != string::npos) {
-                        // Parse date key (e.g., "2025-11-19": {)
                         size_t dateStart = line.find("\"") + 1;
                         size_t dateEnd = line.find("\"", dateStart);
                         string dateKey = line.substr(dateStart, dateEnd - dateStart);
-                        
-                        // Note: opening brace { is on same line as date
-                        // Now read meal types
+
                         map<string, map<string, double>> mealsForDate;
-                        
+
                         while (getline(file, line) && line.find("}") == string::npos) {
                             if (line.find("\"") != string::npos && line.find(":") != string::npos) {
-                                // Parse meal type (e.g., "breakfast": {)
                                 size_t mealStart = line.find("\"") + 1;
                                 size_t mealEnd = line.find("\"", mealStart);
                                 string mealType = line.substr(mealStart, mealEnd - mealStart);
-                                
-                                // Note: opening brace { is on same line as meal type
-                                // Now read food items
+
                                 map<string, double> foodItems;
-                                
+
                                 while (getline(file, line) && line.find("}") == string::npos) {
                                     if (line.find("\"") != string::npos) {
-                                        // Parse food item name and servings
                                         size_t foodStart = line.find("\"") + 1;
                                         size_t foodEnd = line.find("\"", foodStart);
                                         string foodName = line.substr(foodStart, foodEnd - foodStart);
@@ -155,27 +145,28 @@ void Auth::loadUsers() {
                                 mealsForDate[mealType] = foodItems;
                             }
                         }
+
                         user.loggedMeals[dateKey] = mealsForDate;
                     }
                 }
             }
-            
+
             users.push_back(user);
         }
     }
-    
+
     file.close();
 }
 
-// Save all users to the JSON file
+// Saves all users from memory back to the JSON file.
 void Auth::saveUsers() {
     ofstream file(usersFilePath);
     if (!file.is_open()) {
         return;
     }
-    
+
     file << "[\n";
-    
+
     for (size_t i = 0; i < users.size(); i++) {
         const User& user = users[i];
         file << "  {\n";
@@ -187,8 +178,7 @@ void Auth::saveUsers() {
         file << "    \"carbsRatio\": " << user.macroRatio.carbs << ",\n";
         file << "    \"fatsRatio\": " << user.macroRatio.fats << ",\n";
         file << "    \"loggedMeals\": {\n";
-        
-        // Write loggedMeals nested map (date -> meal type -> food items)
+
         size_t dateIdx = 0;
         for (const auto& dateEntry : user.loggedMeals) {
             file << "      \"" << dateEntry.first << "\": {\n";
@@ -214,18 +204,18 @@ void Auth::saveUsers() {
         }
         file << "    }\n";
         file << "  }";
-        
+
         if (i < users.size() - 1) {
             file << ",";
         }
         file << "\n";
     }
-    
+
     file << "]\n";
     file.close();
 }
 
-// Check if username and password match a user
+// Checks credentials and returns true if a matching user is found.
 bool Auth::login(const string& username, const string& password, User& user) {
     for (const auto& u : users) {
         if (u.username == username && u.password == password) {
@@ -236,35 +226,34 @@ bool Auth::login(const string& username, const string& password, User& user) {
     return false;
 }
 
-// Register a new user with calorie goal and macro ratios
-bool Auth::registerUser(const string& username, const string& password, 
-                       int calorieGoal, int proteinRatio, int carbRatio, int fatRatio) {
-    // Check if username already exists
+// Registers a new user and initializes their calorie and macro goals.
+bool Auth::registerUser(const string& username, const string& password,
+                        int calorieGoal, int proteinRatio,
+                        int carbRatio, int fatRatio) {
     for (const auto& user : users) {
         if (user.username == username) {
             return false;
         }
     }
-    
+
     User newUser;
     newUser.uid = generateUID();
     newUser.username = username;
     newUser.password = password;
     newUser.calorieGoal = calorieGoal;
-    
-    // Convert ratios to percentages
+
     int total = proteinRatio + carbRatio + fatRatio;
     newUser.macroRatio.protein = static_cast<double>(proteinRatio) / total;
-    newUser.macroRatio.carbs = static_cast<double>(carbRatio) / total;
-    newUser.macroRatio.fats = static_cast<double>(fatRatio) / total;
-    
+    newUser.macroRatio.carbs   = static_cast<double>(carbRatio)   / total;
+    newUser.macroRatio.fats    = static_cast<double>(fatRatio)    / total;
+
     users.push_back(newUser);
     saveUsers();
-    
+
     return true;
 }
 
-// Update an existing user's information
+// Updates a stored user record based on the given user object.
 bool Auth::updateUser(const User& user) {
     for (auto& u : users) {
         if (u.uid == user.uid) {
@@ -276,7 +265,7 @@ bool Auth::updateUser(const User& user) {
     return false;
 }
 
-// Find a user by their username
+// Returns a pointer to the user with the given username, or nullptr.
 User* Auth::findUserByUsername(const string& username) {
     for (auto& user : users) {
         if (user.username == username) {

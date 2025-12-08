@@ -8,27 +8,28 @@
 
 using namespace std;
 
+// Creates a logger UI with references to menu manager, user, and auth.
 LoggerUI::LoggerUI(MenuManager& menuMgrRef, User& userRef, Auth& authRef)
     : menuManager(menuMgrRef), currentUser(userRef), auth(authRef) {}
 
+// Shows the flow for logging foods for one meal on the current day.
 void LoggerUI::showFoodLogger() {
-    const string CYAN = "\033[36m";
+    const string CYAN   = "\033[36m";
     const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
+    const string GREEN  = "\033[32m";
+    const string RED    = "\033[31m";
+    const string BOLD   = "\033[1m";
+    const string RESET  = "\033[0m";
     
     UIUtils::clearScreen();
     UIUtils::printHeader("LOG A MEAL");
     
-    // Get current date in YYYY-MM-DD format
     time_t now = time(0);
     tm* ltm = localtime(&now);
     char dateStr[100];
     char friendlyDate[100];
-    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", ltm);  // e.g., "2025-11-19"
-    strftime(friendlyDate, sizeof(friendlyDate), "%A, %B %d, %Y", ltm);  // e.g., "Tuesday, November 19, 2025"
+    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", ltm);
+    strftime(friendlyDate, sizeof(friendlyDate), "%A, %B %d, %Y", ltm);
     
     cout << "\n";
     cout << "  Date: " << CYAN << BOLD << friendlyDate << RESET << "\n";
@@ -56,7 +57,7 @@ void LoggerUI::showFoodLogger() {
     }
     
     if (mealChoice == 4) {
-        return;  // Go back to main menu
+        return;
     }
 
     string mealType;
@@ -66,10 +67,7 @@ void LoggerUI::showFoodLogger() {
         case 3: mealType = "dinner"; break;
     }
 
-    // Fetch/generate the menu JSON for this date and meal before loading it.
     UIUtils::fetchMenuFor(dateStr, mealType);
-
-    // Load menu once
     auto menu = menuManager.getDailyMenu(mealType, dateStr);
     
     if (menu.empty()) {
@@ -86,7 +84,6 @@ void LoggerUI::showFoodLogger() {
         return;
     }
     
-    // Keep logging until user types "done"
     string input;
     while (true) {
         UIUtils::clearScreen();
@@ -104,12 +101,10 @@ void LoggerUI::showFoodLogger() {
         
         cin >> input;
         
-        // Check if user wants to finish
         if (input == "done" || input == "Done" || input == "DONE") {
             break;
         }
         
-        // Try to parse as number
         int itemNumber;
         try {
             itemNumber = stoi(input);
@@ -142,7 +137,6 @@ void LoggerUI::showFoodLogger() {
             continue;
         }
         
-        // Log the meal
         bool success = menuManager.logMeal(currentUser, mealType, dateStr, itemNumber, servings);
         
         if (success) {
@@ -150,9 +144,12 @@ void LoggerUI::showFoodLogger() {
             cout << "\n";
             UIUtils::printSeparator();
             cout << "\n";
-            cout << "     " << GREEN << BOLD << "✓ Logged!" << RESET << " " << CYAN << menu[itemNumber - 1].name << RESET 
+            cout << "     " << GREEN << BOLD << "✓ Logged!" << RESET << " "
+                 << CYAN << menu[itemNumber - 1].name << RESET 
                  << " x" << YELLOW << fixed << setprecision(1) << servings << RESET 
-                 << " (" << GREEN << static_cast<int>(menu[itemNumber - 1].calories * servings) << " cal" << RESET << ")\n";
+                 << " (" << GREEN
+                 << static_cast<int>(menu[itemNumber - 1].calories * servings)
+                 << " cal" << RESET << ")\n";
             cout << "\n";
             UIUtils::printSeparator();
             cout << "\n";
@@ -167,20 +164,20 @@ void LoggerUI::showFoodLogger() {
     }
 }
 
+// Shows today's logged foods with nutrition and supports deletion by index.
 void LoggerUI::showLoggedFoods() {
-    const string CYAN = "\033[36m";
-    const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
+    const string CYAN    = "\033[36m";
+    const string YELLOW  = "\033[33m";
+    const string GREEN   = "\033[32m";
     const string MAGENTA = "\033[35m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
+    const string RED     = "\033[31m";
+    const string BOLD    = "\033[1m";
+    const string RESET   = "\033[0m";
     
     while (true) {
         UIUtils::clearScreen();
         UIUtils::printHeader("TODAY'S LOGGED FOODS");
         
-        // Get current date
         time_t now = time(0);
         tm* ltm = localtime(&now);
         char dateStr[100];
@@ -190,7 +187,6 @@ void LoggerUI::showLoggedFoods() {
         
         cout << "\n  " << CYAN << BOLD << friendlyDate << RESET << "\n\n";
         
-        // Check if any foods logged today
         auto dateIt = currentUser.loggedMeals.find(dateStr);
         if (dateIt == currentUser.loggedMeals.end() || dateIt->second.empty()) {
             UIUtils::printSeparator();
@@ -201,7 +197,6 @@ void LoggerUI::showLoggedFoods() {
             return;
         }
         
-        // Display logged foods by meal type and build index map
         const vector<string> mealTypes = {"breakfast", "lunch", "dinner"};
         bool hasAnyFood = false;
         
@@ -217,39 +212,38 @@ void LoggerUI::showLoggedFoods() {
             if (mealIt != dateIt->second.end() && !mealIt->second.empty()) {
                 hasAnyFood = true;
                 
-                // Capitalize meal type for display
                 string displayMeal = mealType;
                 displayMeal[0] = toupper(displayMeal[0]);
                 
                 cout << "  " << MAGENTA << BOLD << displayMeal << RESET << "\n";
                 UIUtils::printSeparator();
                 
-                // Load menu to get nutrition info
                 auto menu = menuManager.getDailyMenu(mealType, dateStr);
                 
-                // Display each food item
                 for (const auto& foodEntry : mealIt->second) {
                     string foodName = foodEntry.first;
                     double servings = foodEntry.second;
                     
-                    // Store ref for deletion
                     itemMap.push_back({mealType, foodName});
                     
-                    // Find nutrition info
                     int totalCals = 0;
-                    double totalProtein = 0, totalCarbs = 0, totalFats = 0;
+                    double totalProtein = 0;
+                    double totalCarbs = 0;
+                    double totalFats = 0;
                     
                     for (const auto& item : menu) {
                         if (item.name == foodName) {
-                            totalCals = static_cast<int>(item.calories * servings);
+                            totalCals    = static_cast<int>(item.calories * servings);
                             totalProtein = item.protein * servings;
-                            totalCarbs = item.carbs * servings;
-                            totalFats = item.fats * servings;
+                            totalCarbs   = item.carbs * servings;
+                            totalFats    = item.fats * servings;
                             break;
                         }
                     }
                     
-                    cout << "  " << YELLOW << "[" << displayIndex++ << "] " << RESET << CYAN << foodName << RESET << " x" << fixed << setprecision(1) << servings << "\n";
+                    cout << "  " << YELLOW << "[" << displayIndex++ << "] " << RESET
+                         << CYAN << foodName << RESET
+                         << " x" << fixed << setprecision(1) << servings << "\n";
                     cout << "      " << GREEN << totalCals << " cal" << RESET
                          << " | " << YELLOW << "P:" << setprecision(0) << totalProtein << "g" << RESET
                          << " " << GREEN << "C:" << totalCarbs << "g" << RESET
@@ -267,7 +261,6 @@ void LoggerUI::showLoggedFoods() {
             UIUtils::waitForEnter();
             return;
         } else {
-            // Show daily totals
             auto totals = menuManager.calculateDailyTotals(currentUser, dateStr);
             UIUtils::printSeparator();
             cout << "\n  " << BOLD << "Daily Totals:" << RESET << "\n";
@@ -277,7 +270,8 @@ void LoggerUI::showLoggedFoods() {
                  << " " << CYAN << "F:" << totals.fats << "g" << RESET << "\n\n";
             UIUtils::printSeparator();
             
-            cout << "\n  Enter number to " << RED << "DELETE" << RESET << " item, or " << YELLOW << "0" << RESET << " to go back: ";
+            cout << "\n  Enter number to " << RED << "DELETE" << RESET
+                 << " item, or " << YELLOW << "0" << RESET << " to go back: ";
             int choice;
             if (!(cin >> choice)) {
                 cin.clear();
@@ -289,10 +283,10 @@ void LoggerUI::showLoggedFoods() {
                 return;
             } else if (choice > 0 && choice <= static_cast<int>(itemMap.size())) {
                 const auto& item = itemMap[choice - 1];
-                if (menuManager.removeLoggedMeal(currentUser, dateStr, item.mealType, item.foodName)) {
+                if (menuManager.removeLoggedMeal(currentUser, dateStr,
+                                                 item.mealType, item.foodName)) {
                     auth.updateUser(currentUser);
                     cout << "\n  " << GREEN << "Item deleted." << RESET << "\n";
-                    // Loop will refresh and show updated list
                 } else {
                     cout << "\n  " << RED << "Error deleting item." << RESET << "\n";
                     UIUtils::waitForEnter();

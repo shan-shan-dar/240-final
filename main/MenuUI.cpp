@@ -9,21 +9,22 @@
 
 using namespace std;
 
+// Constructs a MenuUI using shared managers and current user state.
 MenuUI::MenuUI(MenuManager& menuMgrRef, User& userRef, Auth& authRef) 
     : menuManager(menuMgrRef), currentUser(userRef), auth(authRef) {}
 
+// Shows the dining hall menu for today's date or a user-specified date.
 void MenuUI::showDailyMenu() {
-    const string CYAN = "\033[36m";
+    const string CYAN   = "\033[36m";
     const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
+    const string GREEN  = "\033[32m";
+    const string RED    = "\033[31m";
+    const string BOLD   = "\033[1m";
+    const string RESET  = "\033[0m";
 
     UIUtils::clearScreen();
     UIUtils::printHeader("VIEW DINING HALL MENUS");
 
-    // Ask user: today's date or custom date
     cout << "\n";
     cout << "     " << YELLOW << "[1]" << RESET << " View today's menu\n";
     cout << "     " << YELLOW << "[2]" << RESET << " View menu for a specific date\n";
@@ -34,14 +35,12 @@ void MenuUI::showDailyMenu() {
 
     string dateStr;
     if (dateChoice == 1) {
-        // Use today's date
         time_t now = time(0);
         tm* ltm = localtime(&now);
         char dateBuffer[11];
         strftime(dateBuffer, sizeof(dateBuffer), "%Y-%m-%d", ltm);
         dateStr = dateBuffer;
     } else if (dateChoice == 2) {
-        // Ask user for custom date
         cout << "\n";
         cout << "  Enter date (YYYY-MM-DD): ";
         cin >> dateStr;
@@ -54,7 +53,6 @@ void MenuUI::showDailyMenu() {
         return;
     }
 
-    // Ask user for meal
     cout << "\n";
     cout << "     " << YELLOW << "[1]" << RESET << " Breakfast\n";
     cout << "     " << YELLOW << "[2]" << RESET << " Lunch\n";
@@ -67,8 +65,8 @@ void MenuUI::showDailyMenu() {
     string mealType;
     switch (mealChoice) {
         case 1: mealType = "breakfast"; break;
-        case 2: mealType = "lunch"; break;
-        case 3: mealType = "dinner"; break;
+        case 2: mealType = "lunch";     break;
+        case 3: mealType = "dinner";    break;
         default:
             cout << "\n";
             UIUtils::printSeparator();
@@ -78,10 +76,8 @@ void MenuUI::showDailyMenu() {
             return;
     }
 
-    // Call menu.py to fetch/generate JSON for this date + meal
     UIUtils::fetchMenuFor(dateStr, mealType);
 
-    // Try to get a nice "Friday, November 21, 2025" style date for display
     string friendlyDateStr = dateStr;
     try {
         if (dateStr.size() >= 10) {
@@ -98,7 +94,6 @@ void MenuUI::showDailyMenu() {
             friendlyDateStr = friendlyDate;
         }
     } catch (...) {
-        // If parsing fails, just use the raw string.
         friendlyDateStr = dateStr;
     }
 
@@ -139,6 +134,7 @@ void MenuUI::showDailyMenu() {
     UIUtils::waitForEnter();
 }
 
+// Shows the generated meal plan for today and offers to log it.
 void MenuUI::showMealGenerator() {
     const string CYAN   = "\033[36m";
     const string YELLOW = "\033[33m";
@@ -149,10 +145,8 @@ void MenuUI::showMealGenerator() {
     UIUtils::clearScreen();
     UIUtils::printHeader("PERSONALIZED MEAL PLAN GENERATOR");
 
-    // 1. Ask MenuManager to generate the plan
     MenuManager::MealPlanResult plan = menuManager.generateMealPlan(currentUser);
 
-    // 2. Show daily goals (from the plan)
     cout << "\n";
     cout << "  " << BOLD << "Your Daily Goals:" << RESET << "\n";
     cout << "  - Calories: " << GREEN  << plan.calorieGoal << RESET << "\n";
@@ -161,7 +155,6 @@ void MenuUI::showMealGenerator() {
     cout << "  - Fats:     " << CYAN   << static_cast<int>(plan.fatsGoal)    << "g" << RESET << "\n";
     UIUtils::printSeparator();
 
-    // 3. Check if anything can be generated
     bool anyGenerated = !plan.selectedMeals.empty();
     bool bLogged = plan.mealLogged.count("breakfast") && plan.mealLogged["breakfast"];
     bool lLogged = plan.mealLogged.count("lunch")     && plan.mealLogged["lunch"];
@@ -179,7 +172,6 @@ void MenuUI::showMealGenerator() {
         return;
     }
 
-    // 4. Display the generated plan
     cout << "\n  " << BOLD << "Generated Meal Plan for Today:" << RESET << "\n\n";
 
     double totalCalories = plan.loggedTotals.calories;
@@ -190,7 +182,7 @@ void MenuUI::showMealGenerator() {
     vector<string> mealOrder = {"breakfast", "lunch", "dinner"};
     for (const string& mealType : mealOrder) {
         string mealName = mealType;
-        mealName[0] = toupper(mealName[0]);  // Capitalize
+        mealName[0] = toupper(mealName[0]);
 
         bool isLogged = false;
         auto itLogged = plan.mealLogged.find(mealType);
@@ -209,22 +201,19 @@ void MenuUI::showMealGenerator() {
         }
 
         const auto& plannedItems = itSel->second;
-
         cout << "  " << YELLOW << "⦿ " << mealName << ":" << RESET << "\n";
 
         for (const auto& planned : plannedItems) {
             const FoodItem& item = planned.item;
             double servings = planned.servings;
 
-            // Convert solver "servings" into physical units:
-            // totalAmount = servings * serving_size_amount
             double baseAmount = 1.0;
             try {
                 if (!item.servingAmount.empty()) {
                     baseAmount = std::stod(item.servingAmount);
                 }
             } catch (...) {
-                baseAmount = 1.0; // fall back if parsing fails
+                baseAmount = 1.0;
             }
             double totalAmount = baseAmount * servings;
 
@@ -234,10 +223,9 @@ void MenuUI::showMealGenerator() {
                  << "  (" << item.calories * servings  << " cal"
                  << ", " << static_cast<int>(item.protein) * servings << "g protein"
                  << ", " << static_cast<int>(item.carbs) * servings  << "g carbs"
-                 << ", " << static_cast<int>(item.fats) * servings  << "g fat"
+                 << ", " << static_cast<int>(item.fats) * servings   << "g fat"
                  << ")\n";
 
-            // Totals are still in "solver servings" units, same as before
             totalCalories += item.calories * servings;
             totalProtein  += item.protein  * servings;
             totalCarbs    += item.carbs    * servings;
@@ -247,7 +235,6 @@ void MenuUI::showMealGenerator() {
         cout << "\n";
     }
 
-    // 5. Plan summary
     UIUtils::printSeparator();
     cout << "\n  " << BOLD << "Plan Summary:" << RESET << "\n";
     cout << "  - Total Calories: " << GREEN  << static_cast<int>(totalCalories)
@@ -259,7 +246,6 @@ void MenuUI::showMealGenerator() {
     cout << "  - Total Fats:     " << CYAN   << static_cast<int>(totalFats)
          << "g / " << static_cast<int>(plan.fatsGoal)    << "g" << RESET << "\n\n";
 
-    // 6. Ask whether to log the suggested meals
     cout << "  Do you want to add this meal plan to your daily log? (y/n): ";
     char response;
     cin >> response;
@@ -270,7 +256,6 @@ void MenuUI::showMealGenerator() {
             const string& mType = pair.first;
             const auto& items   = pair.second;
 
-            // Skip logging for meals already logged
             auto itLogged = plan.mealLogged.find(mType);
             if (itLogged != plan.mealLogged.end() && itLogged->second) {
                 continue;
@@ -295,4 +280,3 @@ void MenuUI::showMealGenerator() {
 
     UIUtils::waitForEnter();
 }
-

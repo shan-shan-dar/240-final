@@ -4,17 +4,19 @@
 
 using namespace std;
 
-AuthUI::AuthUI(Auth& authRef, User& userRef, bool& loggedInRef) 
+// Creates an AuthUI wrapper around the Auth manager and user state.
+AuthUI::AuthUI(Auth& authRef, User& userRef, bool& loggedInRef)
     : auth(authRef), currentUser(userRef), isLoggedIn(loggedInRef) {}
 
+// Shows the welcome screen with options to log in, register, or exit.
 void AuthUI::showWelcomeScreen() {
-    const string CYAN = "\033[36m";
-    const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
+    const string CYAN    = "\033[36m";
+    const string YELLOW  = "\033[33m";
+    const string GREEN   = "\033[32m";
     const string MAGENTA = "\033[35m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
-    
+    const string BOLD    = "\033[1m";
+    const string RESET   = "\033[0m";
+
     UIUtils::clearScreen();
     cout << "\n\n";
     cout << "  " << CYAN << BOLD << "╔═══════════════════════════════════════╗" << RESET << "\n";
@@ -34,45 +36,49 @@ void AuthUI::showWelcomeScreen() {
     cout << "  >> Choice: ";
 }
 
+// Shows the login prompt and attempts to authenticate the user.
 void AuthUI::showLoginScreen() {
-    const string CYAN = "\033[36m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
-    
+    const string CYAN   = "\033[36m";
+    const string GREEN  = "\033[32m";
+    const string RED    = "\033[31m";
+    const string BOLD   = "\033[1m";
+    const string RESET  = "\033[0m";
+
     UIUtils::clearScreen();
     UIUtils::printHeader("LOGIN TO YOUR ACCOUNT");
-    
-    string username, password;
-    
+
+    string username;
+    string password;
+
     cout << "\n";
     cout << "     Please enter your credentials:\n\n";
     cout << "  >> " << CYAN << "Username" << RESET << ": ";
     cin >> username;
-    
+
     cout << "  >> " << CYAN << "Password" << RESET << ": ";
     cin >> password;
-    
+
     cout << "\n";
     cout << "     Authenticating";
     for (int i = 0; i < 3; i++) {
         cout << "." << flush;
     }
     cout << "\n\n";
-    
+
     if (auth.login(username, password, currentUser)) {
         isLoggedIn = true;
         UIUtils::printSeparator();
         cout << "\n";
-        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET << " Welcome back, " << CYAN << currentUser.username << RESET << "!\n";
+        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET
+             << " Welcome back, " << CYAN << currentUser.username << RESET << "!\n";
         cout << "\n";
         UIUtils::printSeparator();
         UIUtils::waitForEnter();
     } else {
         UIUtils::printSeparator();
         cout << "\n";
-        cout << "     " << RED << BOLD << "ERROR:" << RESET << " Invalid username or password.\n";
+        cout << "     " << RED << BOLD << "ERROR:" << RESET
+             << " Invalid username or password.\n";
         cout << "     Please check your credentials and try again.\n";
         cout << "\n";
         UIUtils::printSeparator();
@@ -80,31 +86,36 @@ void AuthUI::showLoginScreen() {
     }
 }
 
+// Shows the registration flow and creates a new user account.
 void AuthUI::showRegisterScreen() {
-    const string CYAN = "\033[36m";
-    const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
+    const string CYAN    = "\033[36m";
+    const string YELLOW  = "\033[33m";
+    const string GREEN   = "\033[32m";
+    const string RED     = "\033[31m";
     const string MAGENTA = "\033[35m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
-    
+    const string BOLD    = "\033[1m";
+    const string RESET   = "\033[0m";
+
     UIUtils::clearScreen();
     UIUtils::printHeader("CREATE YOUR ACCOUNT");
-    
-    string username, password;
-    int calorieGoal, proteinRatio, carbRatio, fatRatio;
-    
+
+    string username;
+    string password;
+    int calorieGoal;
+    int proteinRatio;
+    int carbRatio;
+    int fatRatio;
+
     cout << "\n";
     cout << "     " << MAGENTA << BOLD << "STEP 1:" << RESET << " Account Information\n";
     UIUtils::printSeparator();
     cout << "\n";
     cout << "  >> Choose a " << CYAN << "username" << RESET << ": ";
     cin >> username;
-    
+
     cout << "  >> Choose a " << CYAN << "password" << RESET << ": ";
     cin >> password;
-    
+
     cout << "\n";
     cout << "     " << MAGENTA << BOLD << "STEP 2:" << RESET << " Nutrition Goals\n";
     UIUtils::printSeparator();
@@ -112,43 +123,50 @@ void AuthUI::showRegisterScreen() {
     cout << "     Set your daily calorie target (typical: " << YELLOW << "1800-2500" << RESET << ")\n";
     cout << "  >> Daily " << GREEN << "calorie goal" << RESET << ": ";
     cin >> calorieGoal;
-    
+
     cout << "\n";
     cout << "     " << MAGENTA << BOLD << "STEP 3:" << RESET << " Macro Ratio\n";
     UIUtils::printSeparator();
     cout << "\n";
     cout << "     Define your macro split using simple ratios.\n";
-    cout << "     Example: " << YELLOW << "'4 5 1'" << RESET << " = 40% protein, 50% carbs, 10% fats\n";
+    cout << "     Example: " << YELLOW << "'4 5 1'" << RESET
+         << " = 40% protein, 50% carbs, 10% fats\n";
     cout << "     Common splits:\n";
-    cout << "       - " << GREEN << "Balanced" << RESET << ": 3 5 2 (30% protein, 50% carbs, 20% fats)\n";
-    cout << "       - " << YELLOW << "High Protein" << RESET << ": 4 4 2 (40% protein, 40% carbs, 20% fats)\n";
-    cout << "       - " << CYAN << "Low Carb" << RESET << ": 3 2 5 (30% protein, 20% carbs, 50% fats)\n";
+    cout << "       - " << GREEN << "Balanced" << RESET
+         << ": 3 5 2 (30% protein, 50% carbs, 20% fats)\n";
+    cout << "       - " << YELLOW << "High Protein" << RESET
+         << ": 4 4 2 (40% protein, 40% carbs, 20% fats)\n";
+    cout << "       - " << CYAN << "Low Carb" << RESET
+         << ": 3 2 5 (30% protein, 20% carbs, 50% fats)\n";
     cout << "\n";
     cout << "  >> Enter ratio (Protein Carbs Fats): ";
     cin >> proteinRatio >> carbRatio >> fatRatio;
-    
+
     cout << "\n";
     cout << "     Creating your account";
     for (int i = 0; i < 3; i++) {
         cout << "." << flush;
     }
     cout << "\n\n";
-    
-    if (auth.registerUser(username, password, calorieGoal, proteinRatio, carbRatio, fatRatio)) {
+
+    if (auth.registerUser(username, password, calorieGoal,
+                          proteinRatio, carbRatio, fatRatio)) {
         UIUtils::printSeparator();
         cout << "\n";
-        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET << " Account created successfully!\n";
+        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET
+             << " Account created successfully!\n";
         cout << "     You can now log in with your credentials.\n";
         cout << "\n";
         UIUtils::printSeparator();
     } else {
         UIUtils::printSeparator();
         cout << "\n";
-        cout << "     " << RED << BOLD << "ERROR:" << RESET << " Username '" << CYAN << username << RESET << "' already exists.\n";
+        cout << "     " << RED << BOLD << "ERROR:" << RESET
+             << " Username '" << CYAN << username << RESET << "' already exists.\n";
         cout << "     Please try a different username.\n";
         cout << "\n";
         UIUtils::printSeparator();
     }
-    
+
     UIUtils::waitForEnter();
 }

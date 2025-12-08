@@ -6,6 +6,7 @@
 #include "Auth.h"
 #include <string>
 
+// Handles UI flows for logging foods and viewing logged meals.
 class LoggerUI {
 private:
     MenuManager& menuManager;
@@ -13,8 +14,13 @@ private:
     Auth& auth;
 
 public:
+    // Creates a logger UI bound to a menu manager, user, and auth manager.
     LoggerUI(MenuManager& menuMgrRef, User& userRef, Auth& authRef);
+
+    // Shows the interface for logging foods for today's meals.
     void showFoodLogger();
+
+    // Shows today's logged foods and allows deleting entries.
     void showLoggedFoods();
 };
 

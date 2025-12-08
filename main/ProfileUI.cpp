@@ -5,16 +5,18 @@
 
 using namespace std;
 
+// Constructs a ProfileUI for editing the current user's settings.
 ProfileUI::ProfileUI(User& userRef, Auth& authRef)
     : currentUser(userRef), auth(authRef) {}
 
+// Shows the profile editor and lets the user adjust goals and password.
 void ProfileUI::showProfileEditor() {
-    const string CYAN = "\033[36m";
+    const string CYAN   = "\033[36m";
     const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string RESET = "\033[0m";
+    const string GREEN  = "\033[32m";
+    const string RED    = "\033[31m";
+    const string BOLD   = "\033[1m";
+    const string RESET  = "\033[0m";
     
     UIUtils::clearScreen();
     UIUtils::printHeader("EDIT PROFILE & PREFERENCES");
@@ -25,9 +27,9 @@ void ProfileUI::showProfileEditor() {
     cout << "\n";
     cout << "       Daily Calorie Goal: " << GREEN << currentUser.calorieGoal << " calories" << RESET << "\n";
     cout << "       " << YELLOW << "Protein" << RESET << ": " << fixed << setprecision(0) 
-              << (currentUser.macroRatio.protein * 100) << "%\n";
-    cout << "       " << GREEN << "Carbs" << RESET << ": " << (currentUser.macroRatio.carbs * 100) << "%\n";
-    cout << "       " << CYAN << "Fats" << RESET << ": " << (currentUser.macroRatio.fats * 100) << "%\n";
+         << (currentUser.macroRatio.protein * 100) << "%\n";
+    cout << "       " << GREEN << "Carbs"   << RESET << ": " << (currentUser.macroRatio.carbs * 100) << "%\n";
+    cout << "       " << CYAN   << "Fats"   << RESET << ": " << (currentUser.macroRatio.fats * 100) << "%\n";
     cout << "\n";
     UIUtils::printSeparator();
     cout << "\n";
@@ -54,10 +56,13 @@ void ProfileUI::showProfileEditor() {
         cout << "\n";
         UIUtils::printSeparator();
         cout << "\n";
-        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET << " Calorie goal updated to " << GREEN << currentUser.calorieGoal << " calories" << RESET << ".\n";
+        cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET
+             << " Calorie goal updated to "
+             << GREEN << currentUser.calorieGoal << " calories" << RESET << ".\n";
         cout << "\n";
         UIUtils::printSeparator();
         UIUtils::waitForEnter();
+
     } else if (choice == 2) {
         int p, c, f;
         cout << "\n";
@@ -71,20 +76,24 @@ void ProfileUI::showProfileEditor() {
         
         int total = p + c + f;
         currentUser.macroRatio.protein = static_cast<double>(p) / total;
-        currentUser.macroRatio.carbs = static_cast<double>(c) / total;
-        currentUser.macroRatio.fats = static_cast<double>(f) / total;
+        currentUser.macroRatio.carbs   = static_cast<double>(c) / total;
+        currentUser.macroRatio.fats    = static_cast<double>(f) / total;
         
         auth.updateUser(currentUser);
         cout << "\n";
         UIUtils::printSeparator();
         cout << "\n";
         cout << "     " << GREEN << BOLD << "SUCCESS!" << RESET << " Macro ratios updated to:\n";
-        cout << "       " << YELLOW << "Protein" << RESET << ": " << fixed << setprecision(0) << (currentUser.macroRatio.protein * 100) << "%\n";
-        cout << "       " << GREEN << "Carbs" << RESET << ": " << (currentUser.macroRatio.carbs * 100) << "%\n";
-        cout << "       " << CYAN << "Fats" << RESET << ": " << (currentUser.macroRatio.fats * 100) << "%\n";
+        cout << "       " << YELLOW << "Protein" << RESET << ": "
+             << fixed << setprecision(0) << (currentUser.macroRatio.protein * 100) << "%\n";
+        cout << "       " << GREEN  << "Carbs"   << RESET << ": "
+             << (currentUser.macroRatio.carbs * 100) << "%\n";
+        cout << "       " << CYAN   << "Fats"    << RESET << ": "
+             << (currentUser.macroRatio.fats * 100) << "%\n";
         cout << "\n";
         UIUtils::printSeparator();
         UIUtils::waitForEnter();
+
     } else if (choice == 3) {
         string oldPass, newPass;
         cout << "\n";

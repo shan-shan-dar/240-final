@@ -7,6 +7,7 @@
 
 using namespace std;
 
+// Constructs the root UI object and initializes sub-UIs with references.
 UI::UI() 
     : menuManager(), 
       auth(), 
@@ -19,6 +20,7 @@ UI::UI()
 {
 }
 
+// Runs the top-level loop for welcome, login/registration, and exit.
 void UI::run() {
     int choice;
     
@@ -33,12 +35,11 @@ void UI::run() {
         switch (choice) {
             case 1:
                 authUI.showLoginScreen();
-                // Check if login was successful by checking if username is set
                 if (!currentUser.username.empty()) {
                     isLoggedIn = true;
                     showMainMenu();
-                    isLoggedIn = false; // Reset after logout
-                    currentUser = User(); // Clear user data
+                    isLoggedIn = false;
+                    currentUser = User();
                 }
                 break;
             case 2:
@@ -47,12 +48,12 @@ void UI::run() {
             case 3: {
                 UIUtils::clearScreen();
                 cout << "\n\n";
-                const string CYAN = "\033[36m";
+                const string CYAN    = "\033[36m";
                 const string MAGENTA = "\033[35m";
-                const string GREEN = "\033[32m";
-                const string GRAY = "\033[100m";
-                const string BOLD = "\033[1m";
-                const string RESET = "\033[0m";
+                const string GREEN   = "\033[32m";
+                const string GRAY    = "\033[100m";
+                const string BOLD    = "\033[1m";
+                const string RESET   = "\033[0m";
                 
                 cout << "  " << CYAN << BOLD << "╔═══════════════════════════════════════════════════╗" << RESET << "\n";
                 cout << "  " << CYAN << BOLD << "║                                                   ║" << RESET << "\n";
@@ -73,14 +74,15 @@ void UI::run() {
     } while (choice != 3);
 }
 
+// Shows the main logged-in menu and routes to feature-specific screens.
 void UI::showMainMenu() {
-    const string CYAN = "\033[36m";
+    const string CYAN   = "\033[36m";
     const string YELLOW = "\033[33m";
-    const string GREEN = "\033[32m";
-    const string RED = "\033[31m";
-    const string BOLD = "\033[1m";
-    const string GRAY = "\033[100m";
-    const string RESET = "\033[0m";
+    const string GREEN  = "\033[32m";
+    const string RED    = "\033[31m";
+    const string BOLD   = "\033[1m";
+    const string GRAY   = "\033[100m";
+    const string RESET  = "\033[0m";
 
     while (isLoggedIn) {
         UIUtils::clearScreen();
@@ -90,7 +92,6 @@ void UI::showMainMenu() {
         cout << "     Welcome back, " << CYAN << BOLD << currentUser.username << RESET << "!\n";
         cout << "\n";
         
-        // Calculate today's progress
         time_t now = time(0);
         tm* ltm = localtime(&now);
         char dateStr[100];
@@ -101,72 +102,87 @@ void UI::showMainMenu() {
         cout << "     " << BOLD << "Today's Progress:" << RESET << "\n";
         UIUtils::printSeparator();
         
-        // Progress bars
-        int calPercent = (currentUser.calorieGoal > 0) ? (totals.calories * 100 / currentUser.calorieGoal) : 0;
+        int calPercent = (currentUser.calorieGoal > 0)
+            ? (totals.calories * 100 / currentUser.calorieGoal)
+            : 0;
         
-        // Calculate macro goals in grams
         double proteinGoal = (currentUser.calorieGoal * currentUser.macroRatio.protein) / 4.0;
-        double carbsGoal = (currentUser.calorieGoal * currentUser.macroRatio.carbs) / 4.0;
-        double fatsGoal = (currentUser.calorieGoal * currentUser.macroRatio.fats) / 9.0;
+        double carbsGoal   = (currentUser.calorieGoal * currentUser.macroRatio.carbs)   / 4.0;
+        double fatsGoal    = (currentUser.calorieGoal * currentUser.macroRatio.fats)    / 9.0;
         
         int proteinPercent = (proteinGoal > 0) ? (totals.protein * 100 / proteinGoal) : 0;
-        int carbsPercent = (carbsGoal > 0) ? (totals.carbs * 100 / carbsGoal) : 0;
-        int fatsPercent = (fatsGoal > 0) ? (totals.fats * 100 / fatsGoal) : 0;
+        int carbsPercent   = (carbsGoal   > 0) ? (totals.carbs   * 100 / carbsGoal)   : 0;
+        int fatsPercent    = (fatsGoal    > 0) ? (totals.fats    * 100 / fatsGoal)    : 0;
         
-        // Display bars
-        string calColor = (calPercent > 100) ? RED : GRAY;
+        string calColor  = (calPercent > 100) ? RED : GRAY;
         string calStatus = (calPercent > 100) ? "OVER" : to_string(calPercent) + "%";
         
-        string calVal = to_string((int)totals.calories) + " / " + to_string((int)currentUser.calorieGoal);
-        cout << "     " << left << setw(10) << "Calories:" << right << setw(15) << calVal << "  [" << calColor;
+        string calVal = to_string((int)totals.calories) + " / "
+                      + to_string((int)currentUser.calorieGoal);
+        cout << "     " << left << setw(10) << "Calories:"
+             << right << setw(15) << calVal << "  [" << calColor;
         int calBars = min(calPercent / 5, 20);
         for (int i = 0; i < calBars; i++) cout << "█";
         for (int i = calBars; i < 20; i++) cout << "░";
         cout << RESET << "] " << calStatus << RESET << "\n";
         
-        // Protein
-        string protColor = (proteinPercent > 100) ? GREEN : YELLOW;
-        string protStatus = (proteinPercent > 100) ? "DONE" : to_string(proteinPercent) + "%";
-        string protVal = to_string((int)totals.protein) + " / " + to_string((int)proteinGoal) + "g";
-        cout << "     " << left << setw(10) << "Protein:" << right << setw(15) << protVal << "  [" << protColor;
+        string protColor  = (proteinPercent > 100) ? GREEN : YELLOW;
+        string protStatus = (proteinPercent > 100)
+            ? "DONE"
+            : to_string(proteinPercent) + "%";
+        string protVal = to_string((int)totals.protein) + " / "
+                       + to_string((int)proteinGoal) + "g";
+        cout << "     " << left << setw(10) << "Protein:"
+             << right << setw(15) << protVal << "  [" << protColor;
         int protBars = min(proteinPercent / 5, 20);
         for (int i = 0; i < protBars; i++) cout << "█";
         for (int i = protBars; i < 20; i++) cout << "░";
         cout << RESET << "] " << protColor << protStatus << RESET << "\n";
         
-        // Carbs
-        string carbsColor = (carbsPercent > 100) ? RED : GREEN;
-        string carbsStatus = (carbsPercent > 100) ? "OVER" : to_string(carbsPercent) + "%";
-        string carbsVal = to_string((int)totals.carbs) + " / " + to_string((int)carbsGoal) + "g";
-        cout << "     " << left << setw(10) << "Carbs:" << right << setw(15) << carbsVal << "  [" << carbsColor;
+        string carbsColor  = (carbsPercent > 100) ? RED : GREEN;
+        string carbsStatus = (carbsPercent > 100)
+            ? "OVER"
+            : to_string(carbsPercent) + "%";
+        string carbsVal = to_string((int)totals.carbs) + " / "
+                        + to_string((int)carbsGoal) + "g";
+        cout << "     " << left << setw(10) << "Carbs:"
+             << right << setw(15) << carbsVal << "  [" << carbsColor;
         int carbsBars = min(carbsPercent / 5, 20);
         for (int i = 0; i < carbsBars; i++) cout << "█";
         for (int i = carbsBars; i < 20; i++) cout << "░";
         cout << RESET << "] " << carbsColor << carbsStatus << RESET << "\n";
         
-        // Fats
-        string fatsColor = (fatsPercent > 100) ? RED : CYAN;
-        string fatsStatus = (fatsPercent > 100) ? "OVER" : to_string(fatsPercent) + "%";
-        string fatsVal = to_string((int)totals.fats) + " / " + to_string((int)fatsGoal) + "g";
-        cout << "     " << left << setw(10) << "Fats:" << right << setw(15) << fatsVal << "  [" << fatsColor;
+        string fatsColor  = (fatsPercent > 100) ? RED : CYAN;
+        string fatsStatus = (fatsPercent > 100)
+            ? "OVER"
+            : to_string(fatsPercent) + "%";
+        string fatsVal = to_string((int)totals.fats) + " / "
+                       + to_string((int)fatsGoal) + "g";
+        cout << "     " << left << setw(10) << "Fats:"
+             << right << setw(15) << fatsVal << "  [" << fatsColor;
         int fatsBars = min(fatsPercent / 5, 20);
         for (int i = 0; i < fatsBars; i++) cout << "█";
         for (int i = fatsBars; i < 20; i++) cout << "░";
         cout << RESET << "] " << fatsColor << fatsStatus << RESET << "\n";
         
-        // Overall status
         cout << "\n";
         int avgPercent = calPercent;
         if (avgPercent == 0) {
-            cout << "  " << YELLOW << "💡 Tip:" << RESET << " Start logging meals to track your progress!\n";
+            cout << "  " << YELLOW << "💡 Tip:" << RESET
+                 << " Start logging meals to track your progress!\n";
         } else if (avgPercent < 50) {
-            cout << "  " << GREEN << "💪 Keep going!" << RESET << " You have " << (100 - avgPercent) << "% left to reach your goals.\n";
+            cout << "  " << GREEN << "💪 Keep going!" << RESET
+                 << " You have " << (100 - avgPercent)
+                 << "% left to reach your goals.\n";
         } else if (avgPercent < 90) {
-            cout << "  " << GREEN << "🔥 Great progress!" << RESET << " You're over halfway there!\n";
+            cout << "  " << GREEN << "🔥 Great progress!" << RESET
+                 << " You're over halfway there!\n";
         } else if (avgPercent <= 100) {
-            cout << "  " << GREEN << "🎯 Almost there!" << RESET << " You're very close to your goals!\n";
+            cout << "  " << GREEN << "🎯 Almost there!" << RESET
+                 << " You're very close to your goals!\n";
         } else {
-            cout << "  " << RED << "⚠️  Over goal!" << RESET << " Consider lighter options for remaining meals.\n";
+            cout << "  " << RED << "⚠️  Over goal!" << RESET
+                 << " Consider lighter options for remaining meals.\n";
         }
         
         cout << "\n";
@@ -206,7 +222,8 @@ void UI::showMainMenu() {
                 UIUtils::clearScreen();
                 UIUtils::printHeader("LOGOUT");
                 cout << "\n\n";
-                cout << "     Thank you for using Macro Meal Tracker, " << CYAN << currentUser.username << RESET << "!\n";
+                cout << "     Thank you for using Macro Meal Tracker, "
+                     << CYAN << currentUser.username << RESET << "!\n";
                 cout << "     " << GREEN << "Your progress has been saved." << RESET << "\n";
                 cout << "\n";
                 cout << "     Come back soon to track your nutrition goals!\n\n";

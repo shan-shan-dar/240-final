@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 
+// Coordinates the high-level application flow and screen transitions.
 class UI {
 private:
     MenuManager menuManager;
@@ -18,37 +19,20 @@ private:
     User currentUser;
     bool isLoggedIn;
 
-    // Sub-modules
-    // We use unique_ptr or just members. 
-    // Since they need references to members of this class, we must initialize them in constructor.
-    // But currentUser changes on login. 
-    // The sub-modules hold a reference to currentUser. 
-    // If currentUser is a member of UI, its address is stable? 
-    // Yes, as long as UI is not moved/copied.
-    
-    // However, AuthUI needs to update currentUser.
-    // MenuUI needs to read currentUser.
-    
-    // Let's use pointers or references.
-    // If we use members:
-    // AuthUI authUI;
-    // We need to initialize it in initializer list: authUI(auth, currentUser)
-    
-    // But wait, AuthUI constructor takes (Auth&, User&).
-    // So we can do:
-    // UI() : authUI(auth, currentUser), ... {}
-    
     AuthUI authUI;
     MenuUI menuUI;
     LoggerUI loggerUI;
     ProfileUI profileUI;
 
+    // Shows the main menu and routes to sub-screens while logged in.
     void showMainMenu();
 
 public:
+    // Constructs the UI and wires submodules to shared state.
     UI();
+
+    // Starts the application loop for login, main menu, and exit.
     void run();
 };
 
 #endif // UI_H
-
