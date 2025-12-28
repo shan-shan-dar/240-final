@@ -10,7 +10,10 @@ At its core, Mensa treats nutrition as a vector space problem in $\mathbb{R}^4$.
 
 ### 1. Vector Representation
 Each food item $j$ on the menu is modeled as a vector $a_j$:
-$$ a_j = \begin{bmatrix} \text{calories} \\ \text{protein} \\ \text{carbs} \\ \text{fat} \end{bmatrix} $$
+
+$$
+a_j = \begin{bmatrix} \text{calories} \\ \text{protein} \\ \text{carbs} \\ \text{fat} \end{bmatrix}
+$$
 
 We construct a **Macro Coefficient Matrix** $A \in \mathbb{R}^{4 \times n}$, where $n$ is the number of available menu items and the $j$-th column is the vector $a_j$.
 
@@ -18,7 +21,10 @@ We construct a **Macro Coefficient Matrix** $A \in \mathbb{R}^{4 \times n}$, whe
 Let $g \in \mathbb{R}^4$ be the user's target goal vector. We solve for the serving vector $x \in \mathbb{R}^n$ that minimizes the squared Euclidean distance between the total nutrition and the goal.
 
 **Objective Function:**
-$$ \min_{x} \| Ax - g \|_2^2 $$
+
+$$
+\min_{x} \| Ax - g \|_2^2
+$$
 
 **Constraints:**
 This is a **Mixed-Integer Convex Programming (MICP)** problem because servings cannot be arbitrary continuous values (you can't take 0.314 scoops of rice).
@@ -81,6 +87,4 @@ Mensa utilizes a hybrid architecture to leverage the performance of C++ and the 
     ```
 
 ---
-*Built by David Nathanson.*
-*Built by Darshan Shah.*
-*Built by Tien Nguyen Chu.*
+*Built by David Nathanson, Darshan Shah, Tien Nguyen Chu.*
